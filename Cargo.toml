@@ -1,0 +1,11 @@
+[package]
+name = "guion_druid_shell"
+version = "0.1.0"
+authors = ["qwertz19281 <dellen903@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+guion = { path = "../guion" }
+druid-shell = "0.7"
