@@ -1,6 +1,7 @@
 extern crate guion_druid_shell;
 
 use guion::widgets::checkbox::imp::ICheckBoxMut;
+use guion::text::stor::TextStorMut;
 use guion::{aliases::WidgetRefMut, const_std_id, constraint, ctx::{queue::StdEnqueueable, queue::StdOrder}, id::standard::StdID, layout::Orientation, layout::*, path::standard::SimplePath, validation::validated::Validated, widget::*, widgets::{area::Area, button::Button, checkbox::CheckBox, label::Label, pane::Pane, pbar::ProgressBar, splitpane::SplitPane, textbox::{state::Cursor, TextBox}, util::{state::AtomStateMut, caption::CaptionMut}}};
 use guion_druid_shell::app::windows::Windows;
 use guion_druid_shell::app::{App, ArcApp};
@@ -72,7 +73,7 @@ fn main() {
                         .with_trigger(button_action),
                 ),
             ),
-            //TextBox::new(StdID::new()),
+            TextBox::new(StdID::new()),
             //ImmediateLabel{text:"Immediate Label".to_owned(),id:StdID::new()} ,
             //ImmediateTextBox{text:"Immediate TextBox".to_owned(),id:StdID::new()},
         ),
@@ -96,7 +97,7 @@ fn button_action(mut l: Link<ExampleEnv>) {
         for i in debug_type_names {
             eprintln!("\t{}",i);
         }
-        let text = w.traitcast_mut::<dyn CaptionMut<ExampleEnv>>().unwrap();
+        let text = w.traitcast_mut::<dyn TextStorMut<ExampleEnv>>().unwrap();
         let i: u32 = text.caption().parse().unwrap();
         text.replace(&(i+1).to_string());
     }

@@ -69,7 +69,7 @@ impl<E> ArcApp<E> where
     Windows<E>: AsRefMut<E::Storage>,
     ERenderer<E>: AsRefMut<Render<E>> + RenderStdWidgets<E>,
     Render<E>: AsRefMut<ERenderer<E>> + RenderStdWidgets<E>,
-    ESGlyphs<E>: AsRefMut<CairoTextLayout>, //TODO use Piet trait variant
+    E::TextBoxor: AsRefMut<CairoTextLayout>, //TODO use Piet trait variant
     ESCursor<E>: Into<StdCursor>,  //TODO Into<DruidCursor>
 {
     pub fn add_window(&self, f: impl FnOnce(&mut WindowBuilder), widget: impl AsWidgetMut<E>+'static) {

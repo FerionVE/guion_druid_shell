@@ -66,7 +66,7 @@ impl<E> GRender<E> for Render<E> where
 impl<E> RenderStdWidgets<E> for Render<E> where
     E: Env + Sync,
     ERenderer<E>: AsRefMut<Self>,
-    ESGlyphs<E>: AsRefMut<CairoTextLayout>, //TODO use Piet trait variant
+    E::TextBoxor: AsRefMut<CairoTextLayout>, //TODO use Piet trait variant
     ESCursor<E>: Into<StdCursor>,  //TODO Into<DruidCursor>
 {
     #[inline]
@@ -106,7 +106,7 @@ impl<E> RenderStdWidgets<E> for Render<E> where
         }
     }*/
     #[inline]
-    fn render_preprocessed_text(&mut self, text: &ESGlyphs<E>, inner_offset: Offset, c: &mut E::Context) {
+    fn render_preprocessed_text(&mut self, text: &E::TextBoxor, inner_offset: Offset, c: &mut E::Context) {
         let r = unsafe_piet!(self);
         let rect = bounds2rect(self.live_bounds);
         let color = self.live_style.color(&self.live_selector,c);

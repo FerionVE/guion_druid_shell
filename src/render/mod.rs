@@ -74,6 +74,10 @@ pub(crate) fn bounds2rect(b: Bounds) -> Rect {
     }
 }
 
+pub(crate) fn rect2bounds(r: Rect) -> Bounds {
+    Bounds::from_xyxy(r.x0 as i32, r.y0 as i32, r.x1 as i32, r.y1 as i32)
+}
+
 pub(crate) fn offset2point(o: Offset) -> Point {
     Point{
         x: o.x as f64,

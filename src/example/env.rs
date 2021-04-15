@@ -13,6 +13,7 @@ use crate::app::windows::Windows;
 use crate::event::key::Key;
 use crate::render::Render;
 use crate::style::Style;
+use crate::style::font::Glyphs;
 
 use super::ctx::ExampleCtx;
 use super::valid::ExampleValidState;
@@ -28,6 +29,7 @@ impl Env for ExampleEnv {
     type Storage = Windows<Self>;
     type WidgetID = StdID;
     type WidgetPath = ExamplePath;
+    type TextBoxor = Glyphs;
     type ValidState = ExampleValidState;
     type Message = Box<dyn Any>;
 }
