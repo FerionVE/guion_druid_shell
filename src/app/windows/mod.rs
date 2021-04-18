@@ -46,7 +46,7 @@ impl<E> Windows<E> where E: Env, E::Storage: AsRefMut<Self>, Self: AsRefMut<E::S
 }
 
 impl<E> Widgets<E> for Windows<E> where E: Env, E::Storage: AsRefMut<Self>, Self: AsRefMut<E::Storage> {
-    fn widget(&self, i: E::WidgetPath) -> Result<Resolved<E>,GuionError<E>> {
+    fn widget(&self, i: E::WidgetPath) -> Result<Resolved<E>,E::Error> {
         resolve_in_root(
             self,
             i.clone(),
@@ -55,17 +55,16 @@ impl<E> Widgets<E> for Windows<E> where E: Env, E::Storage: AsRefMut<Self>, Self
         )
     }
 
-    fn widget_mut(&mut self, i: E::WidgetPath) -> Result<ResolvedMut<E>,GuionError<E>> {
+    fn widget_mut(&mut self, i: E::WidgetPath) -> Result<ResolvedMut<E>,E::Error> {
         resolve_in_root_mut(
             self.as_mut(),
-            |s| AsRefMut::<Self>::as_ref(s) as &dyn Widget<_>,
             |s| AsRefMut::<Self>::as_mut(s) as &mut dyn WidgetMut<_>,
             i.clone(),
             i
         )
     }
 
-    fn trace_bounds(&self, ctx: &mut E::Context, i: E::WidgetPath, b: &Bounds, e: &EStyle<E>, force: bool) -> Result<Bounds,GuionError<E>> {
+    fn trace_bounds(&self, ctx: &mut E::Context, i: E::WidgetPath, b: &Bounds, e: &EStyle<E>, force: bool) -> Result<Bounds,E::Error> {
         let l = ctx.link(Resolved{
             wref: Box::new(self.base()),
             path: WidgetPath::empty(),

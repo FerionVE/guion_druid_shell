@@ -26,7 +26,7 @@ impl Key {
             DKey::Character(s) if s == "a" || s == "A" => Self::KbdA,
             DKey::Character(s) if s == "x" || s == "X" => Self::KbdX,
             DKey::Character(s) if s == "c" || s == "C" => Self::KbdC,
-            DKey::Character(s) if s == "v" || s == "V" => Self::KbdA,
+            DKey::Character(s) if s == "v" || s == "V" => Self::KbdV,
             _ => Self::Kbd(k.clone()),
         }
     }

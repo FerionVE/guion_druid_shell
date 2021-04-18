@@ -1,11 +1,10 @@
 use druid_shell::kurbo::{self, Point};
-use druid_shell::piet::{CairoText, CairoTextLayout, Color, FontFamily, Text, TextAttribute};
+use druid_shell::piet::{CairoText, CairoTextLayout, Color, FontFamily, Text, TextAttribute, LineMetric};
 use druid_shell::piet::TextLayoutBuilder;
-use guion::text::layout::{TxtLayout, TxtLayoutFromStor};
+use guion::text::layout::{Direction, TxtLayout, TxtLayoutFromStor};
 use guion::text::stor::TextStor;
 use guion::validation::validated::Validated;
 use render::rect2bounds;
-use std::path::Path;
 use guion::util::bounds::{Bounds, Offset};
 use guion::util::{bounds::Dims};
 use guion::style::font::Glyphs as GGlyphs;
@@ -150,6 +149,86 @@ impl<E> TxtLayout<E> for Glyphs where E: Env {
 
     fn chars(&self) -> usize {
         self.text.text().chars().count()
+    }
+
+    fn move_cursor(&self, dir: Direction, off: usize) -> usize {
+        fn line_of_char(s: &Glyphs, off: usize) -> (usize,usize,LineMetric) {
+            for test_line in 0..s.text.line_count() {
+                let lm = s.text.line_metric(test_line).unwrap();
+                if off > lm.start_offset && off < lm.end_offset {
+                    return (test_line, off - lm.start_offset,lm);
+                }
+            }
+            panic!()
+        }
+        fn last_char_before_in_str(s: &str, off: usize) -> usize {
+            s.char_indices()
+                .filter(|(o,_)| *o < off )
+                .last()
+                .unwrap().0
+        }
+        fn next_char_in_str(s: &str, off: usize) -> usize {
+            s.char_indices()
+                .filter(|(o,_)| *o > off )
+                .next()
+                .unwrap().0
+        }
+
+        match dir {
+            Direction::Right => {
+                let (line,_,lm) = line_of_char(self, off);
+                // if it's >= lm.end_offset, then it's on the next line
+                let nc = next_char_in_str(self.text.line_text(line).unwrap(), off - lm.start_offset) + lm.start_offset;
+                if nc > lm.end_offset && line+1 >= self.text.line_count() {
+                    off
+                } else {
+                    nc
+                }
+            },
+            Direction::Left => {
+                let (line,_,lm) = line_of_char(self, off);
+                if off > lm.start_offset {
+                    last_char_before_in_str(self.text.line_text(line).unwrap(), off - lm.start_offset) + lm.start_offset
+                } else {
+                    assert_eq!(off, lm.start_offset);
+                    if line > 0 {
+                        let lm = self.text.line_metric(line-1).unwrap();
+                        let lt = self.text.line_text(line-1).unwrap();
+                        last_char_before_in_str(lt, off - lm.start_offset) + lm.start_offset
+                    } else {
+                        0
+                    }
+                }
+            },
+            Direction::Down => {
+                let (line,_,lm) = line_of_char(self, off);
+                if line+1 >= self.text.line_count() {
+                    return lm.end_offset;
+                }
+                let dlm = self.text.line_metric(line+1).unwrap();
+                let tp = self.text.hit_test_text_position(off);
+                let rh = self.text.hit_test_point(Point{
+                    x: tp.point.x,
+                    y: dlm.y_offset + dlm.baseline, //TODO intra-line hit
+                });
+                assert_eq!(line_of_char(self,rh.idx).0, line+1);
+                rh.idx
+            },
+            Direction::Up => {
+                let (line,_,_) = line_of_char(self, off);
+                if line == 0 {
+                    return 0;
+                }
+                let dlm = self.text.line_metric(line-1).unwrap();
+                let tp = self.text.hit_test_text_position(off);
+                let rh = self.text.hit_test_point(Point{
+                    x: tp.point.x,
+                    y: dlm.y_offset + dlm.baseline, //TODO intra-line hit
+                });
+                assert_eq!(line_of_char(self,rh.idx).0, line-1);
+                rh.idx
+            },
+        }
     }
 }
 
