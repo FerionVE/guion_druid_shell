@@ -1,5 +1,4 @@
-use druid_shell::kurbo::Rect;
-use druid_shell::piet::{CairoTextLayout, Piet, RenderContext};
+use druid_shell::piet::{CairoTextLayout, RenderContext};
 use guion::aliases::*;
 use guion::env::Env;
 use guion::render::widgets::RenderStdWidgets;
@@ -7,8 +6,6 @@ use guion::style::Style;
 use guion::util::AsRefMut;
 use guion::render::Render as GRender;
 use guion::util::bounds::{Bounds, Offset};
-
-use crate::style::cursor::cursor2cursor;
 
 use super::*;
 
@@ -123,7 +120,7 @@ impl<E> RenderStdWidgets<E> for Render<E> where
         self.set_cursor_specific(&cursor,c);
     }
 
-    fn set_cursor_specific(&mut self, cursor: &ESCursor<E>, c: &mut E::Context) {
+    fn set_cursor_specific(&mut self, cursor: &ESCursor<E>, _: &mut E::Context) {
         self.next_cursor = Some(cursor.clone());
     }
 }

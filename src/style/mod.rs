@@ -10,7 +10,6 @@ use guion::util::border::Border;
 use self::selector::*;
 
 use super::*;
-use std::ops::Mul;
 
 pub mod font;
 pub mod cursor;

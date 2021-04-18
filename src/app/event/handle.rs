@@ -4,7 +4,6 @@ use guion::ctx::Context;
 use guion::ctx::queue::StdOrder;
 use guion::env::Env;
 use guion::event::imp::StdVarSup;
-use guion::event::variant::VariantSupport;
 use guion::util::AsRefMut;
 use guion::event::Event as GEvent;
 use guion::event::standard::variants::RootEvent;

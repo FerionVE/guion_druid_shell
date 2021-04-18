@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use druid_shell::piet::CairoTextLayout;
-use druid_shell::{WinHandler, WindowBuilder, kurbo};
+use druid_shell::{WindowBuilder, kurbo};
 use guion::aliases::*;
 use guion::env::Env;
 use guion::event::filter::StdFilter;
@@ -16,7 +16,6 @@ use guion::widget::as_widget::AsWidgetMut;
 use crate::ctx::state::DSState;
 use crate::render::Render;
 
-use self::event::BaseEvent;
 use self::window::Window;
 use self::window::handle::WHandle;
 use self::windows::Windows;

@@ -2,12 +2,10 @@ use guion::aliases::{ESize, EStyle};
 use guion::ctx::Context;
 use guion::env::Env;
 use guion::event::compound::EventCompound;
-use guion::id::standard::StdID;
 use guion::path::WidgetPath;
 use guion::render::link::RenderLink;
 use guion::util::AsRefMut;
 use guion::util::bounds::Bounds;
-use guion::util::error::GuionError;
 use guion::widget::link::Link;
 use guion::widget::resolvable::ResolvableMut;
 use guion::widget::{WBaseMut, Widget, WidgetMut};
@@ -80,7 +78,7 @@ impl<E> Widget<E> for Windows<E> where E: Env {
         self._id.clone()
     }
 
-    fn _render(&self, l: Link<E>, r: &mut RenderLink<E>) {
+    fn _render(&self, _: Link<E>, _: &mut RenderLink<E>) {
         unimplemented!()
     }
 
@@ -98,7 +96,7 @@ impl<E> Widget<E> for Windows<E> where E: Env {
         passed
     }
 
-    fn _size(&self, l: Link<E>, e: &EStyle<E>) -> ESize<E> {
+    fn _size(&self, _: Link<E>, _: &EStyle<E>) -> ESize<E> {
         unimplemented!()
     }
 
@@ -112,7 +110,7 @@ impl<E> Widget<E> for Windows<E> where E: Env {
             .ok_or(())
     }
 
-    fn into_child<'s>(self: Box<Self>, i: usize) -> Result<guion::widget::resolvable::Resolvable<'s,E>,()> where Self: 's {
+    fn into_child<'s>(self: Box<Self>, _: usize) -> Result<guion::widget::resolvable::Resolvable<'s,E>,()> where Self: 's {
         unimplemented!()
     }
 
@@ -137,7 +135,7 @@ impl<E> WidgetMut<E> for Windows<E> where E: Env {
             .map(|w| (*w.widget).as_mut() )
             .ok_or(())
     }
-    fn into_child_mut<'w>(self: Box<Self>, i: usize) -> Result<ResolvableMut<'w,E>,()> where Self: 'w {
+    fn into_child_mut<'w>(self: Box<Self>, _: usize) -> Result<ResolvableMut<'w,E>,()> where Self: 'w {
         unimplemented!()
     }
     fn childs_mut(&mut self) -> Vec<ResolvableMut<E>> {

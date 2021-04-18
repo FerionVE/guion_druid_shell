@@ -1,10 +1,10 @@
 extern crate guion_druid_shell;
 
-use guion::widgets::checkbox::imp::ICheckBoxMut;
+
 use guion::text::stor::TextStorMut;
-use guion::{aliases::WidgetRefMut, const_std_id, constraint, ctx::{queue::StdEnqueueable, queue::StdOrder}, id::standard::StdID, layout::Orientation, layout::*, path::standard::SimplePath, validation::validated::Validated, widget::*, widgets::{area::Area, button::Button, checkbox::CheckBox, label::Label, pane::Pane, pbar::ProgressBar, splitpane::SplitPane, textbox::{state::Cursor, TextBox}, util::{state::AtomStateMut, caption::CaptionMut}}};
+use guion::{aliases::WidgetRefMut, const_std_id, constraint, ctx::{queue::StdEnqueueable, queue::StdOrder}, id::standard::StdID, layout::Orientation, path::standard::SimplePath, validation::validated::Validated, widget::*, widgets::{area::Area, button::Button, checkbox::CheckBox, label::Label, pane::Pane, pbar::ProgressBar, splitpane::SplitPane, textbox::TextBox, util::state::AtomStateMut}};
 use guion_druid_shell::app::windows::Windows;
-use guion_druid_shell::app::{App, ArcApp};
+use guion_druid_shell::app::ArcApp;
 use guion_druid_shell::example::ctx::ExampleCtx;
 use guion_druid_shell::example::env::{ExampleEnv, ExamplePath};
 use link::Link;
@@ -14,7 +14,7 @@ const_std_id!(RootPane ProgBar Area51 Pane51 Button51);
 
 //minimal example using the simple module
 fn main() {
-    let mut simplion = ArcApp::<ExampleEnv>::new(ExampleCtx::new());
+    let simplion = ArcApp::<ExampleEnv>::new(ExampleCtx::new());
 
     //special bounds for progressbar and checkbox
     //let pb_bounds = Size{x: SizeAxis::empty(), y: SizeAxis{min: 32, preferred: 64, max: Some(64), pressure: 1.0}};

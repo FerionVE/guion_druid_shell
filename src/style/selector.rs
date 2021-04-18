@@ -1,12 +1,9 @@
-use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::ops::AddAssign;
 
-use guion::aliases::ESColor;
 use guion::env::Env;
 use guion::style::selector::{StyleSelector, StyleSelectorAppend};
 use guion::style::selectag::standard::StdSelectag;
-use guion::util::border::Border;
 use guion::style::selectag::StyleSelectag;
 
 #[non_exhaustive]

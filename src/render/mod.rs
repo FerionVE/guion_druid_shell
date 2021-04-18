@@ -1,4 +1,4 @@
-use druid_shell::{Cursor, WindowHandle};
+use druid_shell::WindowHandle;
 use druid_shell::kurbo::{Point, Rect};
 use druid_shell::piet::{self, Piet, RenderContext};
 use guion::aliases::{ESCursor, ESSelector, EStyle};

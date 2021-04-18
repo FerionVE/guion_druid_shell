@@ -5,6 +5,7 @@ use guion::event::standard::dyn_evt::DynEvent;
 use guion::id::standard::StdID;
 use guion::layout::StdGonstraints;
 use guion::path::standard::SimplePath;
+use guion::util::error::GuionError;
 use guion::widget::as_widget::{AsWidget, AsWidgetMut};
 use std::any::Any;
 use std::fmt::Debug;
@@ -32,6 +33,7 @@ impl Env for ExampleEnv {
     type TextBoxor = Glyphs;
     type ValidState = ExampleValidState;
     type Message = Box<dyn Any>;
+    type Error = GuionError<ExampleEnv>;
 }
 
 impl Backend<ExampleEnv> for ExampleBackend {

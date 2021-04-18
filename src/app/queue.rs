@@ -4,7 +4,7 @@ use guion::env::Env;
 use guion::util::AsRefMut;
 use guion::widget::root::Widgets;
 
-use super::{App, ArcApp};
+use super::App;
 use super::windows::Windows;
 
 impl<E> App<E> where
