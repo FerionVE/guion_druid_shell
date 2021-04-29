@@ -111,7 +111,11 @@ impl<E> TxtLayout<E> for Glyphs where E: Env {
         let i = char_off(self.text.text(),i as usize);
         for test_line in 0..self.text.line_count() {
             let lm = self.text.line_metric(test_line).unwrap();
-            if i > lm.start_offset && i < lm.end_offset {
+            if i >= lm.start_offset && i < lm.end_offset {
+                let h = off_char(i - lm.start_offset);
+                return Some((h as u32,test_line as u32));
+            }
+            if test_line+1 == self.text.line_count() && i >= lm.start_offset && i <= lm.end_offset {
                 let h = off_char(i - lm.start_offset);
                 return Some((h as u32,test_line as u32));
             }
@@ -151,11 +155,18 @@ impl<E> TxtLayout<E> for Glyphs where E: Env {
         self.text.text().chars().count()
     }
 
+    fn len(&self) -> usize {
+        self.text.text().len()
+    }
+
     fn move_cursor(&self, dir: Direction, off: usize) -> usize {
         fn line_of_char(s: &Glyphs, off: usize) -> (usize,usize,LineMetric) {
             for test_line in 0..s.text.line_count() {
                 let lm = s.text.line_metric(test_line).unwrap();
-                if off > lm.start_offset && off < lm.end_offset {
+                if off >= lm.start_offset && off < lm.end_offset {
+                    return (test_line, off - lm.start_offset,lm);
+                }
+                if test_line+1 == s.text.line_count() && off >= lm.start_offset && off <= lm.end_offset {
                     return (test_line, off - lm.start_offset,lm);
                 }
             }
@@ -165,13 +176,15 @@ impl<E> TxtLayout<E> for Glyphs where E: Env {
             s.char_indices()
                 .filter(|(o,_)| *o < off )
                 .last()
-                .unwrap().0
+                .map(|i| i.0 )
+                .unwrap_or(0)
         }
         fn next_char_in_str(s: &str, off: usize) -> usize {
             s.char_indices()
                 .filter(|(o,_)| *o > off )
                 .next()
-                .unwrap().0
+                .map(|i| i.0 )
+                .unwrap_or(s.len())
         }
 
         match dir {
@@ -229,6 +242,19 @@ impl<E> TxtLayout<E> for Glyphs where E: Env {
                 rh.idx
             },
         }
+    }
+
+    fn char_len_l(&self, off: usize, chars: usize) -> usize {
+        let mut oof = off;
+        for _ in 0..chars {
+            oof = TxtLayout::<E>::move_cursor(self,Direction::Left,oof);
+        }
+        off - oof
+    }
+
+    fn fix_boundary(&self, off: usize) -> usize {
+        assert!(self.text.text().is_char_boundary(off)); //TODO implement fix boundaries
+        off
     }
 }
 
@@ -309,11 +335,12 @@ pub(crate) fn ksize2dims(s: kurbo::Size) -> Dims {
 }
 
 fn char_off(s: impl AsRef<str>, o: usize) -> usize {
-    let s = s.as_ref();
+    /*let s = s.as_ref();
     match s.char_indices().skip(o).next() {
         Some((i,_)) => i,
         None => s.len(),
-    }
+    }*/
+    o
 }
 fn off_char(bo: usize) -> usize {
     bo //TODO
