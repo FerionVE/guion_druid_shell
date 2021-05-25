@@ -30,7 +30,6 @@ impl Env for ExampleEnv {
     type Storage = Windows<Self>;
     type WidgetID = StdID;
     type WidgetPath = ExamplePath;
-    type TextBoxor = Glyphs;
     type ValidState = ExampleValidState;
     type Message = Box<dyn Any>;
     type Error = GuionError<ExampleEnv>;
@@ -42,6 +41,7 @@ impl Backend<ExampleEnv> for ExampleBackend {
     type EventFilter = StdFilter<ExampleEnv>;
     type Style = Style;
     type Size = StdGonstraints;
+    type TextLayout = Glyphs;
 }
 
 pub type ExamplePath = SimplePath<ExampleEnv,StdID>;

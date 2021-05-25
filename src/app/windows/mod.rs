@@ -6,6 +6,7 @@ use guion::path::WidgetPath;
 use guion::render::link::RenderLink;
 use guion::util::AsRefMut;
 use guion::util::bounds::Bounds;
+use guion::widget::imp::{AWidget, AWidgetMut};
 use guion::widget::link::Link;
 use guion::widget::resolvable::ResolvableMut;
 use guion::widget::{WBaseMut, Widget, WidgetMut};
@@ -28,7 +29,7 @@ impl<E> Windows<E> where E: Env, E::Storage: AsRefMut<Self>, Self: AsRefMut<E::S
 
     pub fn resolved(&self) -> Resolved<E> {
         Resolved{
-            wref: Box::new(self as &dyn Widget<E>),
+            wref: AWidget::Ref(self as &dyn Widget<E>),
             path: WidgetPath::empty(),
             direct_path: WidgetPath::empty(),
             stor: self.as_ref(),
@@ -36,7 +37,7 @@ impl<E> Windows<E> where E: Env, E::Storage: AsRefMut<Self>, Self: AsRefMut<E::S
     }
     pub fn resolved_mut(&mut self) -> ResolvedMut<E> {
         ResolvedMut{
-            wref: Box::new(self as &mut dyn WidgetMut<E>),
+            wref: AWidgetMut::Mut(self as &mut dyn WidgetMut<E>),
             path: WidgetPath::empty(),
             direct_path: WidgetPath::empty(),
         }
@@ -64,7 +65,7 @@ impl<E> Widgets<E> for Windows<E> where E: Env, E::Storage: AsRefMut<Self>, Self
 
     fn trace_bounds(&self, ctx: &mut E::Context, i: E::WidgetPath, b: &Bounds, e: &EStyle<E>, force: bool) -> Result<Bounds,E::Error> {
         let l = ctx.link(Resolved{
-            wref: Box::new(self.base()),
+            wref: AWidget::Ref(self.base()),
             path: WidgetPath::empty(),
             direct_path: WidgetPath::empty(),
             stor: self.as_ref(),
