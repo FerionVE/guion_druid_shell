@@ -8,7 +8,7 @@ license = "MIT"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-guion = { git = "https://github.com/FerionVE/guion", rev = "1c3147f3" }
+guion = { git = "https://github.com/FerionVE/guion", rev = "0307c1c9" }
 #guion = { path = "../guion" }
 druid-shell = { git = "https://github.com/linebender/druid", rev = "2d1bed1d" }
 

@@ -14,7 +14,7 @@ const_std_id!(RootPane ProgBar Area51 Pane51 Button51);
 
 //minimal example using the simple module
 fn main() {
-    let simplion = ArcApp::<ExampleEnv>::new(ExampleCtx::new());
+    let app = ArcApp::<ExampleEnv>::new(ExampleCtx::new());
 
     //special bounds for progressbar and checkbox
     //let pb_bounds = Size{x: SizeAxis::empty(), y: SizeAxis{min: 32, preferred: 64, max: Some(64), pressure: 1.0}};
@@ -79,15 +79,15 @@ fn main() {
         ),
     );
 
-    simplion.add_window(
+    app.add_window(
         |w| {
-            w.set_title("AKW")
+            w.set_title("zero")
         },
         g,
     );
 
-    //while simplion.do_events() {}
-    simplion.run();
+    //while app.do_events() {}
+    app.run();
 }
 
 fn button_action(mut l: Link<ExampleEnv>) {
