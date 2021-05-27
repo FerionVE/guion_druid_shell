@@ -252,28 +252,30 @@ impl<E> TxtLayout<E> for Glyphs where E: Env {
         off - oof
     }
 
-    fn fix_boundary(&self, off: usize) -> usize {
-        assert!(self.text.text().is_char_boundary(off)); //TODO implement fix boundaries
+    fn fix_boundary(&self, mut off: usize) -> usize {
+        while !self.text.text().is_char_boundary(off) && off!=0 {
+            off = off.saturating_sub(1); //TODO efficient algorithm
+        }
         off
     }
 }
 
-impl<E> TxtLayoutFromStor<E,str> for Glyphs where E: Env {
-    fn from(s: &str, c: &mut E::Context) -> Self {
+impl<E,S> TxtLayoutFromStor<E,S> for Glyphs where E: Env, S: TextStor<E>+?Sized {
+    fn from(s: &S, c: &mut E::Context) -> Self {
         Self {
             text: CairoText::new()
-                .new_text_layout(s.to_owned())
+                .new_text_layout(s.caption().into_owned())
                 .font(FontFamily::SANS_SERIF,16.0) //dead ass font fn use font props
                 .default_attribute(TextAttribute::TextColor(Color::rgba8(255, 255, 255, 255))) //TODO take style ins Glyphs::generate
                 .build().unwrap()
         }
     }
 
-    fn update(&mut self, s: &str, c: &mut E::Context) {
-        *self = TxtLayoutFromStor::<E,str>::from(s,c);
+    fn update(&mut self, s: &S, c: &mut E::Context) {
+        *self = TxtLayoutFromStor::<E,S>::from(s,c);
     }
 }
-impl<E> TxtLayoutFromStor<E,&str> for Glyphs where E: Env {
+/*impl<E> TxtLayoutFromStor<E,&str> for Glyphs where E: Env {
     fn from(s: &&str, c: &mut E::Context) -> Self {
         TxtLayoutFromStor::<E,str>::from(*s,c)
     }
@@ -299,7 +301,7 @@ impl<T,E> TxtLayoutFromStor<E,Validated<E,T>> for Glyphs where T: TextStor<E>, S
     fn update(&mut self, s: &Validated<E,T>, c: &mut E::Context) {
         TxtLayoutFromStor::<E,T>::update(self,&*s,c)
     }
-}
+}*/
 
 unsafe impl<E> Statize<E> for Glyphs {
     type Statur = Glyphs;
