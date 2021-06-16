@@ -7,8 +7,7 @@ use guion::validation::validated::Validated;
 use render::rect2bounds;
 use guion::util::bounds::{Bounds, Offset};
 use guion::util::{bounds::Dims};
-use guion::style::font::Glyphs as GGlyphs;
-use guion::{widget::cast::Statize, style::font::{GlyphInfo,CrazyWorkaroundPPIter}};
+use guion::widget::cast::Statize;
 use druid_shell::piet::TextLayout;
 use crate::render::offset2point;
 
@@ -37,43 +36,6 @@ pub enum FontRender {
 
 pub struct Glyphs {
     text: CairoTextLayout,
-}
-
-impl<E> GGlyphs<E> for Glyphs where
-    E: Env + Sync,
-    E::Context: AsRefMut<DSState>
-{
-    type Glyph = GlyphInfo;
-
-    #[inline]
-    fn size(&self) -> Dims { 
-        ksize2dims(self.text.size())
-    }
-    #[inline]
-    fn line_ascent(&self) -> u32 {
-        todo!()
-    }
-    #[inline]
-    fn line_height(&self) -> u32 {
-        todo!()
-    }
-    #[inline]
-    fn line_distance(&self) -> u32 {
-        todo!()
-    }
-    fn lines<'s>(&'s self) -> CrazyWorkaroundPPIter<'s,GlyphInfo> {
-        todo!()
-    }
-    fn generate(s: &str, b: (f32,f32), ctx: &mut E::Context) -> Self {
-        //TODO W H A T colorz are stuck inside here ?!?!?!?!? ok we already wanted to use style here
-        Glyphs{
-            text: CairoText::new()
-                .new_text_layout(s.to_owned())
-                .font(FontFamily::SANS_SERIF,16.0) //dead ass font fn use font props
-                .default_attribute(TextAttribute::TextColor(Color::rgba8(255, 255, 255, 255))) //TODO take style ins Glyphs::generate
-                .build().unwrap()
-        }
-    }
 }
 
 impl<E> TxtLayout<E> for Glyphs where E: Env {

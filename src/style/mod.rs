@@ -32,7 +32,6 @@ impl<E> guion::style::Style<E> for Style where
     type Font = Font;
     type Cursor = StdCursor;
     type Color = Color;
-    type Glyphs = Glyphs;
     type Selector = Selector<E>;
 
     #[inline]
@@ -50,16 +49,6 @@ impl<E> guion::style::Style<E> for Style where
     #[inline]
     fn border(&self, v: &Self::Selector, _: &mut E::Context) -> Border {
         stupid_border(v.clone().filled())
-    }
-
-    #[inline]
-    fn preprocess_text(&self, s: &str, c: &mut E::Context) -> Self::Glyphs {
-        todo!()
-    }
-
-    #[inline]
-    fn is_cached_valid(&self, s: &Self::Glyphs, _c: &mut E::Context) -> bool {
-        todo!()
     }
 
     fn and(&self, s: &Self) -> Self {
