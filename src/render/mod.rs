@@ -27,7 +27,7 @@ impl<E> Render<E> where
     E: Env,
     ESCursor<E>: Into<StdCursor>,  //TODO Into<DruidCursor>
 {
-    pub(crate) fn inscope21<'s,'l:'s,R>(window_handle: WindowHandle, piet: &'s mut Piet<'l>, f: impl FnOnce(&mut Self)->R) -> R {
+    pub(crate) fn scoped<'s,'l:'s,R>(window_handle: WindowHandle, piet: &'s mut Piet<'l>, f: impl FnOnce(&mut Self)->R) -> R {
         let p = piet as *mut Piet;
         let p = unsafe{std::mem::transmute::<*mut Piet<'l>,*mut Piet<'static>>(p)};
         let mut s = Self {
@@ -43,9 +43,9 @@ impl<E> Render<E> where
     }
     /// The contravariance of the internal Piet lifetime is violated so additional care is required in calling piet fns
     unsafe fn piet<'s,'l:'s>(&'s mut self) -> &'s mut Piet<'l> {
-        Self::pietor(&mut self.piet)
+        Self::piet_ref(&mut self.piet)
     }
-    unsafe fn pietor<'s,'l:'s>(p: &'s mut *mut Piet<'static>) -> &'s mut Piet<'l> {
+    unsafe fn piet_ref<'s,'l:'s>(p: &'s mut *mut Piet<'static>) -> &'s mut Piet<'l> {
         let p = std::mem::transmute::<*mut Piet<'static>,*mut Piet<'l>>(*p);
         &mut *p
     }

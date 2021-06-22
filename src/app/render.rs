@@ -31,7 +31,7 @@ impl<E> ArcApp<E> where
         let mut s = self.inner.lock().unwrap();
         let s = &mut *s;
         let window_handle = s.windows.windows[window_id].handle.as_ref().unwrap().clone();
-        Render::<E>::inscope21(window_handle.clone(),render, |r| {
+        Render::<E>::scoped(window_handle.clone(),render, |r| {
             //TODO reset cursor
             //TODO restore renderer
             r.pre();

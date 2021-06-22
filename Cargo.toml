@@ -3,14 +3,14 @@ name = "guion_druid_shell"
 version = "0.1.0"
 authors = ["qwertz19281 <dellen903@gmail.com>"]
 edition = "2018"
-license = "MIT"
+license = "MIT" # Apache-2.0
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 guion = { git = "https://github.com/FerionVE/guion", rev = "b30215e7" }
 #guion = { path = "../guion" }
-druid-shell = { git = "https://github.com/linebender/druid", rev = "2d1bed1d" }
+druid-shell = { git = "https://github.com/linebender/druid", rev = "f19ddf15" }
 
 [profile.release]
 codegen-units = 1

@@ -11,7 +11,7 @@ use super::*;
 
 macro_rules! unsafe_piet {
     ($s:ident) => {unsafe{
-        Render::<E>::pietor(&mut $s.piet)
+        Render::<E>::piet_ref(&mut $s.piet)
     }}
 }
 

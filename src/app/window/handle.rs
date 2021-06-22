@@ -91,7 +91,7 @@ impl<E> WinHandler for WHandle<E> where
 
     fn mouse_move(&mut self, event: &druid_shell::MouseEvent) {
         self.app.do_event(self.self_id, BaseEvent::MouseMove(event));
-    } // TODO is there a stupid fn to q u e r y mouse pos? or do we have to calc from this shit?
+    } // TODO is there a stupid fn to q u e r y mouse pos? or do we have to calc from the event?
 
     fn mouse_down(&mut self, event: &druid_shell::MouseEvent) {
         self.app.do_event(self.self_id, BaseEvent::MouseDown(event));
