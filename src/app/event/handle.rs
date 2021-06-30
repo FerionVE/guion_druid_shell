@@ -79,7 +79,7 @@ impl<E> ArcApp<E> where
             }
             BaseEvent::KeyDown(key) => {
                 let e: EEvent<E> = GEvent::from(RootEvent::KbdDown{
-                    key: Key::kbd(&key.key).into()
+                    key: Key::Kbd(key.key.clone(),key.location).into()
                 });
                 handled |= s.send_event(window_id,e);
                 if let druid_shell::keyboard_types::Key::Character(c) = key.key {
@@ -92,7 +92,7 @@ impl<E> ArcApp<E> where
             }
             BaseEvent::KeyUp(key) => {
                 let e: EEvent<E> = GEvent::from(RootEvent::KbdUp{
-                    key: Key::kbd(&key.key).into()
+                    key: Key::Kbd(key.key,key.location).into()
                 });
                 handled = s.send_event(window_id,e);
             }
