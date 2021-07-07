@@ -2,7 +2,7 @@ extern crate guion_druid_shell;
 
 
 use guion::text::stor::TextStorMut;
-use guion::{aliases::WidgetRefMut, const_std_id, constraint, ctx::{queue::StdEnqueueable, queue::StdOrder}, id::standard::StdID, layout::Orientation, path::standard::SimplePath, validation::validated::Validated, widget::*, widgets::{area::Area, button::Button, checkbox::CheckBox, label::Label, pane::Pane, pbar::ProgressBar, splitpane::SplitPane, textbox::TextBox, util::state::AtomStateMut}};
+use guion::{aliases::WidgetRefMut, const_std_id, constraint, ctx::{queue::StdEnqueueable, queue::StdOrder}, id::standard::StdID, layout::Orientation, path::standard::SimplePath, widget::*, widgets::{area::Area, button::Button, checkbox::CheckBox, label::Label, pane::Pane, pbar::ProgressBar, splitpane::SplitPane, textbox::TextBox, util::state::AtomStateMut}};
 use guion_druid_shell::app::windows::Windows;
 use guion_druid_shell::app::ArcApp;
 use guion_druid_shell::example::ctx::ExampleCtx;
@@ -31,7 +31,7 @@ fn main() {
         (
             Label::new(StdID::new())
                 .with_size(cb_bounds)
-                .with_text(Validated::new("Label".to_owned())),
+                .with_text("Label".to_owned()),
             Area::new(
                 Area51(),
                 Pane::new(

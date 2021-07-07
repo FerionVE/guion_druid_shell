@@ -3,7 +3,6 @@ use druid_shell::piet::{CairoText, CairoTextLayout, Color, FontFamily, Text, Tex
 use druid_shell::piet::TextLayoutBuilder;
 use guion::text::layout::{Direction, TxtLayout, TxtLayoutFromStor};
 use guion::text::stor::TextStor;
-use guion::validation::validated::Validated;
 use render::rect2bounds;
 use guion::util::bounds::{Bounds, Offset};
 use guion::util::{bounds::Dims};
