@@ -2,7 +2,7 @@ use druid_shell::kurbo::{self, Point};
 use druid_shell::piet::{CairoText, CairoTextLayout, Color, FontFamily, Text, TextAttribute, LineMetric};
 use druid_shell::piet::TextLayoutBuilder;
 use guion::text::layout::{Direction, TxtLayout, TxtLayoutFromStor};
-use guion::text::stor::TextStor;
+use guion::text::stor::{TextStor, ToTextLayout};
 use guion::validation::validated::Validated;
 use render::rect2bounds;
 use guion::util::bounds::{Bounds, Offset};
@@ -222,48 +222,41 @@ impl<E> TxtLayout<E> for Glyphs where E: Env {
     }
 }
 
-impl<E,S> TxtLayoutFromStor<E,S> for Glyphs where E: Env, S: TextStor<E>+?Sized {
-    fn from(s: &S, c: &mut E::Context) -> Self {
-        Self {
+impl<E> ToTextLayout<Glyphs,E> for str where E: Env {
+    fn to_text_layout(&self, c: &mut E::Context) -> Glyphs {
+        Glyphs {
             text: CairoText::new()
-                .new_text_layout(s.caption().into_owned())
+                .new_text_layout(self.to_owned())
                 .font(FontFamily::SANS_SERIF,16.0) //dead ass font fn use font props
                 .default_attribute(TextAttribute::TextColor(Color::rgba8(255, 255, 255, 255))) //TODO take style ins Glyphs::generate
                 .build().unwrap()
         }
     }
 
-    fn update(&mut self, s: &S, c: &mut E::Context) {
-        *self = TxtLayoutFromStor::<E,S>::from(s,c);
+    fn update_text_layout(&self, s: &mut Glyphs, c: &mut E::Context) {
+        *s = <str as ToTextLayout::<Glyphs,E>>::to_text_layout(self,c)
     }
 }
-/*impl<E> TxtLayoutFromStor<E,&str> for Glyphs where E: Env {
-    fn from(s: &&str, c: &mut E::Context) -> Self {
-        TxtLayoutFromStor::<E,str>::from(*s,c)
+
+impl<E> ToTextLayout<Glyphs,E> for String where E: Env {
+    fn to_text_layout(&self, c: &mut E::Context) -> Glyphs {
+        <str as ToTextLayout<Glyphs,E>>::to_text_layout(self,c)
     }
 
-    fn update(&mut self, s: &&str, c: &mut E::Context) {
-        TxtLayoutFromStor::<E,str>::update(self,*s,c)
+    fn update_text_layout(&self, s: &mut Glyphs, c: &mut E::Context) {
+        *s =  <str as ToTextLayout<Glyphs,E>>::to_text_layout(self,c)
     }
 }
-impl<E> TxtLayoutFromStor<E,String> for Glyphs where E: Env {
-    fn from(s: &String, c: &mut E::Context) -> Self {
-        TxtLayoutFromStor::<E,str>::from(&*s,c)
+
+impl<E> ToTextLayout<Glyphs,E> for u32 where E: Env { //TODO should the way of rendering numbers be provided by guion or by the backend?
+    fn to_text_layout(&self, c: &mut E::Context) -> Glyphs {
+        <str as ToTextLayout<Glyphs,E>>::to_text_layout(&self.to_string(),c)
     }
 
-    fn update(&mut self, s: &String, c: &mut E::Context) {
-        TxtLayoutFromStor::<E,str>::update(self,&*s,c)
+    fn update_text_layout(&self, s: &mut Glyphs, c: &mut E::Context) {
+        *s =  <str as ToTextLayout<Glyphs,E>>::to_text_layout(&self.to_string(),c)
     }
 }
-impl<T,E> TxtLayoutFromStor<E,Validated<E,T>> for Glyphs where T: TextStor<E>, Self: TxtLayoutFromStor<E,T>, E: Env {
-    fn from(s: &Validated<E,T>, c: &mut E::Context) -> Self {
-        TxtLayoutFromStor::<E,T>::from(&*s,c)
-    }
-
-    fn update(&mut self, s: &Validated<E,T>, c: &mut E::Context) {
-        TxtLayoutFromStor::<E,T>::update(self,&*s,c)
-    }
-}*/
 
 unsafe impl<E> Statize<E> for Glyphs {
     type Statur = Glyphs;
