@@ -1,9 +1,8 @@
-use guion::aliases::{ESize, EStyle};
+use guion::aliases::{ESize, EStyle, ERenderer};
 use guion::ctx::Context;
 use guion::env::Env;
 use guion::event::compound::EventCompound;
 use guion::path::WidgetPath;
-use guion::render::link::RenderLink;
 use guion::util::AsRefMut;
 use guion::util::bounds::Bounds;
 use guion::widget::imp::{AWidget, AWidgetMut};
@@ -22,7 +21,7 @@ pub struct Windows<E> where E: Env {
 
 // impl WidgetRoot
 
-impl<E> Windows<E> where E: Env, E::Storage: AsRefMut<Self>, Self: AsRefMut<E::Storage> {
+impl<E> Windows<E> where E: Env, for<'a> E::Storage<'a>: AsRefMut<Self>, for<'a> Self: AsRefMut<E::Storage<'a>> {
     pub(crate) fn path_of_window(&self, window: usize) -> E::WidgetPath {
         (*self.windows[window].widget).as_ref().in_parent_path(WidgetPath::empty(),true) //TODO empty default constructor for path
     }
@@ -44,7 +43,7 @@ impl<E> Windows<E> where E: Env, E::Storage: AsRefMut<Self>, Self: AsRefMut<E::S
     }
 }
 
-impl<E> Widgets<E> for Windows<E> where E: Env, E::Storage: AsRefMut<Self>, Self: AsRefMut<E::Storage> {
+impl<E> Widgets<E> for Windows<E> where E: Env, for<'a> E::Storage<'a>: AsRefMut<Self>, for<'a> Self: AsRefMut<E::Storage<'a>> {
     fn widget(&self, i: E::WidgetPath) -> Result<Resolved<E>,E::Error> {
         resolve_in_root(
             self,
@@ -72,6 +71,13 @@ impl<E> Widgets<E> for Windows<E> where E: Env, E::Storage: AsRefMut<Self>, Self
         });
         Widget::trace_bounds(self,l,i,b,e,force)
     }
+
+    fn lt_ref<'l,'r,'s>(&'r self) -> &'r E::Storage<'s> where 's: 'r, 'l: 'r, 'l: 's, Self: 'l {
+        self.as_ref()
+    }
+    fn lt_mut<'l,'r,'s>(&'r mut self) -> &'r mut E::Storage<'s> where 's: 'r, 'l: 'r, 'l: 's, Self: 'l {
+        self.as_mut()
+    }
 }
 
 impl<E> Widget<E> for Windows<E> where E: Env {
@@ -79,7 +85,7 @@ impl<E> Widget<E> for Windows<E> where E: Env {
         self._id.clone()
     }
 
-    fn _render(&self, _: Link<E>, _: &mut RenderLink<E>) {
+    fn _render(&self, _: Link<E>, _: &mut ERenderer<'_,E>) {
         unimplemented!()
     }
 

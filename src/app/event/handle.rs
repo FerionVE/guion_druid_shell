@@ -24,8 +24,8 @@ impl<E> ArcApp<E> where
     EEvent<E>: StdVarSup<E>,
     EEKey<E>: From<Key>,
     EEFilter<E>: From<StdFilter<E>>,
-    E::Storage: AsRefMut<Windows<E>>,
-    Windows<E>: AsRefMut<E::Storage>,
+    for<'a> E::Storage<'a>: AsRefMut<Windows<E>>,
+    for<'a> Windows<E>: AsRefMut<E::Storage<'a>>,
 {
     pub(crate) fn do_event(&self, window_id: usize, event: BaseEvent) -> bool {
         let mut s = self.inner.lock().unwrap();
@@ -81,12 +81,14 @@ impl<E> ArcApp<E> where
                 let e: EEvent<E> = GEvent::from(RootEvent::KbdDown{
                     key: Key::Kbd(key.key.clone(),key.location).into()
                 });
+                eprintln!("KeyDown: {:?}",e);
                 handled |= s.send_event(window_id,e);
                 if let druid_shell::keyboard_types::Key::Character(c) = key.key {
                     //TODO do we have to timer-simulate ongoing keypress?
                     let e: EEvent<E> = GEvent::from(RootEvent::TextInput{
                         text: c,
                     });
+                    eprintln!("KeyDownTI: {:?}",e);
                     handled |= s.send_event(window_id,e);
                 }
             }
@@ -94,6 +96,7 @@ impl<E> ArcApp<E> where
                 let e: EEvent<E> = GEvent::from(RootEvent::KbdUp{
                     key: Key::Kbd(key.key,key.location).into()
                 });
+                eprintln!("KeyUp: {:?}",e);
                 handled = s.send_event(window_id,e);
             }
             BaseEvent::Wheel(m) => {
@@ -101,6 +104,7 @@ impl<E> ArcApp<E> where
                     x: m.wheel_delta.x as i32,
                     y: m.wheel_delta.y as i32,
                 });
+                eprintln!("Wheel: {:?}",e);
                 handled |= s.send_event(window_id,e);
             }
             BaseEvent::Zoom(_) => {
@@ -110,18 +114,21 @@ impl<E> ArcApp<E> where
                 let e: EEvent<E> = GEvent::from(RootEvent::MouseMove{
                     pos: kpoint2offset(m.pos)
                 });
+                eprintln!("MouseMove: {:?}",e);
                 handled |= s.send_event(window_id,e);
             }
             BaseEvent::MouseDown(m) => {
                 let e: EEvent<E> = GEvent::from(RootEvent::MouseDown{
                     key: Key::Mouse(m.button).into()
                 });
+                eprintln!("MouseDown: {:?}",e);
                 handled |= s.send_event(window_id,e);
             }
             BaseEvent::MouseUp(m) => {
                 let e: EEvent<E> = GEvent::from(RootEvent::MouseUp{
                     key: Key::Mouse(m.button).into()
                 });
+                eprintln!("MouseUp: {:?}",e);
                 handled |= s.send_event(window_id,e);
             }
             BaseEvent::MouseLeave => {
@@ -169,8 +176,8 @@ impl<E> App<E> where
     EEvent<E>: StdVarSup<E>,
     EEKey<E>: From<Key>,
     EEFilter<E>: From<StdFilter<E>>,
-    E::Storage: AsRefMut<Windows<E>>,
-    Windows<E>: AsRefMut<E::Storage>,
+    for<'a> E::Storage<'a>: AsRefMut<Windows<E>>,
+    for<'a> Windows<E>: AsRefMut<E::Storage<'a>>,
 {
     fn send_event(&mut self, window_id: usize, e: EEvent<E>) -> bool {
         let e = EventCompound{

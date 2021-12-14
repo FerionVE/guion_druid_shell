@@ -1,7 +1,6 @@
 use druid_shell::piet::Piet;
 use guion::aliases::{ECQueue, ERenderer, ESCursor};
 use guion::env::Env;
-use guion::render::link::RenderLink;
 use guion::render::widgets::RenderStdWidgets;
 use guion::style::selectag::standard::StdSelectag;
 use guion::style::standard::cursor::StdCursor;
@@ -17,10 +16,10 @@ use super::windows::Windows;
 
 impl<E> ArcApp<E> where
     E: Env,
-    ERenderer<E>: AsRefMut<Render<E>> + RenderStdWidgets<E>,
-    Render<E>: AsRefMut<ERenderer<E>>,
-    E::Storage: AsRefMut<Windows<E>>,
-    Windows<E>: AsRefMut<E::Storage>,
+    for<'a> ERenderer<'a,E>: AsRefMut<Render<'a,E>> + RenderStdWidgets<E>,
+    for<'a> Render<'a,E>: AsRefMut<ERenderer<'a,E>>,
+    for<'a> E::Storage<'a>: AsRefMut<Windows<E>>,
+    for<'a> Windows<E>: AsRefMut<E::Storage<'a>>,
     ECQueue<E>: AsRefMut<crate::ctx::queue::Queue<E>>,
     ESCursor<E>: Into<StdCursor>,  //TODO Into<DruidCursor>
 {
@@ -31,7 +30,7 @@ impl<E> ArcApp<E> where
         let mut s = self.inner.lock().unwrap();
         let s = &mut *s;
         let window_handle = s.windows.windows[window_id].handle.as_ref().unwrap().clone();
-        Render::<E>::scoped(window_handle.clone(),render, |r| {
+        /*Render::<E>::scoped(window_handle.clone(),render, |r| {
             //TODO reset cursor
             //TODO restore renderer
             r.pre();
@@ -67,7 +66,7 @@ impl<E> ArcApp<E> where
 
             r.post();
             //TODO restore renderer
-        })
+        })*/
     }
     pub(crate) fn render_post(&self, window_id: usize) {
         //todo!()

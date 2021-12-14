@@ -64,10 +64,10 @@ impl<E> ArcApp<E> where
     EEvent<E>: StdVarSup<E>,
     EEKey<E>: From<crate::event::key::Key>,
     EEFilter<E>: From<StdFilter<E>>,
-    E::Storage: AsRefMut<Windows<E>>,
-    Windows<E>: AsRefMut<E::Storage>,
-    ERenderer<E>: AsRefMut<Render<E>> + RenderStdWidgets<E>,
-    Render<E>: AsRefMut<ERenderer<E>> + RenderStdWidgets<E>,
+    for<'a> E::Storage<'a>: AsRefMut<Windows<E>>,
+    for<'a> Windows<E>: AsRefMut<E::Storage<'a>>,
+    for<'a> ERenderer<'a,E>: AsRefMut<Render<'a,E>> + RenderStdWidgets<E>,
+    for<'a> Render<'a,E>: AsRefMut<ERenderer<'a,E>> + RenderStdWidgets<E>,
     ETextLayout<E>: AsRefMut<CairoTextLayout>, //TODO use Piet trait variant
     ESCursor<E>: Into<StdCursor>,  //TODO Into<DruidCursor>
 {

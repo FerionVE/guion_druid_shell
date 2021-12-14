@@ -1,3 +1,4 @@
+use druid_shell::piet::Piet;
 use guion::backend::Backend;
 use guion::env::Env;
 use guion::event::filter::StdFilter;
@@ -5,6 +6,7 @@ use guion::event::standard::dyn_evt::DynEvent;
 use guion::id::standard::StdID;
 use guion::layout::StdGonstraints;
 use guion::path::standard::SimplePath;
+use guion::util::AsRefMut;
 use guion::util::error::GuionError;
 use guion::widget::as_widget::{AsWidget, AsWidgetMut};
 use std::any::Any;
@@ -16,7 +18,7 @@ use crate::render::Render;
 use crate::style::Style;
 use crate::style::font::Glyphs;
 
-use super::ctx::ExampleCtx;
+use super::ctx::{ExampleCtx, ExampleHandler};
 use super::valid::ExampleValidState;
 
 #[derive(Clone,PartialEq,Default)]
@@ -27,7 +29,7 @@ pub struct ExampleBackend;
 impl Env for ExampleEnv {
     type Backend = ExampleBackend;
     type Context = ExampleCtx;
-    type Storage = Windows<Self>;
+    type Storage<'a> = Windows<Self>;
     type WidgetID = StdID;
     type WidgetPath = ExamplePath;
     type ValidState = ExampleValidState;
@@ -36,7 +38,7 @@ impl Env for ExampleEnv {
 }
 
 impl Backend<ExampleEnv> for ExampleBackend {
-    type Renderer = Render<ExampleEnv>;
+    type Renderer<'a> = Render<'a,ExampleEnv>;
     type Event = DynEvent<ExampleEnv,Key,ExampleDest>; //TODO ditch Consuming
     type EventFilter = StdFilter<ExampleEnv>;
     type Style = Style;

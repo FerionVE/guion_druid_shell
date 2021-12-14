@@ -1,16 +1,8 @@
 use guion::text::stor::TextStor;
-use guion::text::stor::TextStorMut;
-use guion::util::sma::SMA;
 use guion::widget::as_widget::{AsWidget, AsWidgetMut};
 use guion::widget::resolvable::{Resolvable, ResolvableMut};
-use guion::widgets::button::Button;
-use guion::widgets::label::Label;
 use guion::widgets::textbox::TextBox;
-use guion::widgets::textbox::state::Cursor;
-use guion::widgets::util::LocalGlyphCache;
-use guion::{const_std_id, constraint};
-use guion::layout::Orientation;
-use guion::widgets::pane::Pane;
+use guion::const_std_id;
 use guion_druid_shell::app::ArcApp;
 use guion_druid_shell::example::ctx::ExampleCtx;
 use guion_druid_shell::example::env::ExampleEnv;

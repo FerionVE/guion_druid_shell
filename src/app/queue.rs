@@ -10,8 +10,8 @@ use super::windows::Windows;
 impl<E> App<E> where
     E: Env,
     ECQueue<E>: AsRefMut<crate::ctx::queue::Queue<E>>,
-    E::Storage: AsRefMut<Windows<E>>,
-    Windows<E>: AsRefMut<E::Storage>,
+    for<'a> E::Storage<'a>: AsRefMut<Windows<E>>,
+    for<'a> Windows<E>: AsRefMut<E::Storage<'a>>,
 {
     #[allow(unreachable_code)]
     pub(crate) fn do_queued(&mut self, pass: StdOrder) {

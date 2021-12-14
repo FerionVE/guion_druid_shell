@@ -1,5 +1,6 @@
 use guion::ctx::Context;
 use guion::ctx::clipboard::CtxClipboardAccess;
+use guion::env::Env;
 use guion::handler::standard::StdHandler;
 use guion::id::standard::StdID;
 use guion::state::CtxStdState;
@@ -21,7 +22,7 @@ pub struct ExampleCtx {
 impl ExampleCtx {
     pub fn new() -> Self {
         Self {
-            handler: StdHandler::new(()),
+            handler: StdHandler::<(),ExampleEnv>::new(()),
             ds_state: DSState::new(),
             queue: Queue{queues:HashMap::new(),force_render:true},
         }
@@ -42,6 +43,10 @@ impl Context<ExampleEnv> for ExampleCtx {
     fn queue(&self) -> &Self::Queue {
         &self.queue
     }
+
+    fn lt_mut<'s>(&mut self) -> &mut <ExampleEnv as Env>::Context {
+        unsafe{std::mem::transmute(self)}
+    }
 }
 
 impl AsRefMut<Self> for ExampleCtx {
@@ -54,7 +59,7 @@ impl AsRefMut<Self> for ExampleCtx {
         self
     }
 }
-impl AsRefMut<ExampleHandler> for ExampleCtx {
+impl AsRefMut<StdHandler<(),ExampleEnv>> for ExampleCtx {
     #[inline]
     fn as_ref(&self) -> &ExampleHandler {
         &self.handler
@@ -102,7 +107,7 @@ impl DerefMut for ExampleCtx {
 }*/
 
 //TODO move to handler of different
-impl CtxClipboardAccess<ExampleEnv> for ExampleCtx {
+impl<'a> CtxClipboardAccess<ExampleEnv> for ExampleCtx {
     #[inline]
     fn clipboard_set_text(&mut self, v: &str) {
         self.ds_state.clipboard.as_mut().unwrap().put_string(v);
@@ -113,11 +118,15 @@ impl CtxClipboardAccess<ExampleEnv> for ExampleCtx {
     }
 }
 
-impl DynState<ExampleEnv> for ExampleCtx {
+impl<'a> DynState<ExampleEnv> for ExampleCtx {
     fn remote_state_or_default<T>(&self, id: StdID) -> T where T: Default + Clone + 'static {
         self.handler.remote_state_or_default(id)
     }
     fn push_remote_state<T>(&mut self, id: StdID, v: T) where T: 'static {
         self.handler.push_remote_state(id,v)
     }
+}
+
+fn akw22(a: &<ExampleEnv as Env>::Context) {
+    let r = AsRefMut::<ExampleHandler>::as_ref(a);
 }
