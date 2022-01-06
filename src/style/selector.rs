@@ -73,24 +73,6 @@ pub enum Variance {
 
 #[non_exhaustive]
 #[derive(Clone,Copy,PartialEq)]
-pub enum StdCursor {
-    Default,
-    Arrow,
-    IBeam,
-    Wait,
-    Crosshair,
-    WaitArrow,
-    SizeNWSE,
-    SizeNESW,
-    SizeWE,
-    SizeNS,
-    SizeAll,
-    No,
-    Hand,
-}
-
-#[non_exhaustive]
-#[derive(Clone,Copy,PartialEq)]
 pub enum BorderPtr {
     Default,
     Outer,

@@ -15,7 +15,7 @@ const_std_id!(TBox);
 
 impl AsWidget<ExampleEnv> for Model {
     fn as_ref(&self) -> Resolvable<ExampleEnv> {
-        Resolvable::from_widget(
+        Resolvable::<'_,ExampleEnv>::from_widget(
             TextBox::immediate(TBox(),&self.text)
         )
     }
@@ -25,7 +25,7 @@ impl AsWidget<ExampleEnv> for Model {
 }
 impl AsWidgetMut<ExampleEnv> for Model {
     fn as_mut(&mut self) -> guion::widget::resolvable::ResolvableMut<ExampleEnv> {
-        ResolvableMut::from_widget(
+        ResolvableMut::<'_,ExampleEnv>::from_widget(
             TextBox::immediate(TBox(),(&self.text).immutable())
         )
     }

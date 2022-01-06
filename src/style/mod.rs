@@ -27,7 +27,7 @@ impl<E> guion::style::Style<E> for Style where
     E: Env + Default + Sync,
     //E::Backend: GBackend<E,Style=Self>,
     //E::StyleSelector: Into<Selector<E>>,
-    E::Context: AsRefMut<DSState>,
+    for<'a> E::Context<'a>: AsRefMut<DSState>,
 {
     type Font = Font;
     type Cursor = StdCursor;
@@ -35,19 +35,19 @@ impl<E> guion::style::Style<E> for Style where
     type Selector = Selector<E>;
 
     #[inline]
-    fn font(&self, v: &Self::Selector, _: &mut E::Context) -> Option<&Self::Font> {
+    fn font(&self, v: &Self::Selector, _: &mut E::Context<'_>) -> Option<&Self::Font> {
         todo!()
     }
     #[inline]
-    fn cursor(&self, v: &Self::Selector, _: &mut E::Context) -> Self::Cursor {
+    fn cursor(&self, v: &Self::Selector, _: &mut E::Context<'_>) -> Self::Cursor {
         self.cursor.clone()
     }
     #[inline]
-    fn color(&self, v: &Self::Selector, _: &mut E::Context) -> Self::Color {
+    fn color(&self, v: &Self::Selector, _: &mut E::Context<'_>) -> Self::Color {
         Color::from_rgba8(stupid_colors(v.clone().filled()))
     }
     #[inline]
-    fn border(&self, v: &Self::Selector, _: &mut E::Context) -> Border {
+    fn border(&self, v: &Self::Selector, _: &mut E::Context<'_>) -> Border {
         stupid_border(v.clone().filled())
     }
 

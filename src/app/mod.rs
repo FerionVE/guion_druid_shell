@@ -3,18 +3,19 @@ use std::sync::{Arc, Mutex};
 use druid_shell::piet::CairoTextLayout;
 use druid_shell::{WindowBuilder, kurbo};
 use guion::aliases::*;
+use guion::backend::Backend;
 use guion::env::Env;
 use guion::event::filter::StdFilter;
 use guion::event::imp::StdVarSup;
 use guion::id::WidgetIDAlloc;
 use guion::render::widgets::RenderStdWidgets;
-use guion::style::standard::cursor::StdCursor;
 use guion::util::AsRefMut;
 use guion::util::bounds::Dims;
 use guion::widget::as_widget::AsWidgetMut;
 
 use crate::ctx::state::DSState;
 use crate::render::Render;
+use crate::style::cursor::IntoGuionDruidShellCursor;
 
 use self::window::Window;
 use self::window::handle::WHandle;
@@ -34,11 +35,11 @@ pub struct ArcApp<E> where E: Env {
 pub struct App<E> where E: Env {
     ds_app: druid_shell::Application,
     windows: windows::Windows<E>,
-    ctx: E::Context,
+    ctx: E::Context<'static>,
 }
 
-impl<E> ArcApp<E> where E: Env, E::Context: AsRefMut<DSState>, E::WidgetID: WidgetIDAlloc {
-    pub fn new(mut ctx: E::Context) -> Self {
+impl<E> ArcApp<E> where E: Env, for<'a> E::Context<'a>: AsRefMut<DSState>, E::WidgetID: WidgetIDAlloc {
+    pub fn new(mut ctx: E::Context<'static>) -> Self {
         let ds_app = druid_shell::Application::new().unwrap(); //TODO error handling in all crate
         let windows = Windows{windows: vec![],_id: WidgetIDAlloc::new_id()};
         ctx.as_mut().clipboard = Some(ds_app.clipboard());
@@ -59,17 +60,18 @@ impl<E> ArcApp<E> where E: Env, E::Context: AsRefMut<DSState>, E::WidgetID: Widg
 
 impl<E> ArcApp<E> where
     E: Env,
-    E::Context: AsRefMut<DSState>,
-    ECQueue<E>: AsRefMut<crate::ctx::queue::Queue<E>>,
+    for<'a> E::Context<'a>: AsRefMut<DSState>,
+    for<'a> ECQueue<'a,E>: AsRefMut<crate::ctx::queue::Queue<E>>,
     EEvent<E>: StdVarSup<E>,
     EEKey<E>: From<crate::event::key::Key>,
     EEFilter<E>: From<StdFilter<E>>,
     for<'a> E::Storage<'a>: AsRefMut<Windows<E>>,
     for<'a> Windows<E>: AsRefMut<E::Storage<'a>>,
-    for<'a> ERenderer<'a,E>: AsRefMut<Render<'a,E>> + RenderStdWidgets<E>,
-    for<'a> Render<'a,E>: AsRefMut<ERenderer<'a,E>> + RenderStdWidgets<E>,
+    for<'a> E::Backend: Backend<E,Renderer<'a>=Render<'a,E>>,
+    //for<'a> ERenderer<'a,E>: AsRefMut<Render<'a,E>> + RenderStdWidgets<E>,
+    for<'a> Render<'a,E>: RenderStdWidgets<E>,
     ETextLayout<E>: AsRefMut<CairoTextLayout>, //TODO use Piet trait variant
-    ESCursor<E>: Into<StdCursor>,  //TODO Into<DruidCursor>
+    ESCursor<E>: IntoGuionDruidShellCursor<E>,
 {
     pub fn add_window(&self, f: impl FnOnce(&mut WindowBuilder), widget: impl AsWidgetMut<E>+'static) {
         let app;

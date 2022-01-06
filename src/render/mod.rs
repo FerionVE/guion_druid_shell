@@ -7,30 +7,80 @@ use guion::env::Env;
 use guion::util::AsRefMut;
 use guion::util::bounds::{Bounds, Offset};
 
+use crate::style::cursor::IntoGuionDruidShellCursor;
+
 pub mod imp;
 
 pub struct Render<'s,E> where E: Env {
-    piet: &'s mut Piet<'static>,
-    window_handle: &'s WindowHandle,
-    pub live_bounds: Bounds,
-    pub live_viewport: Bounds,
-    pub live_style: EStyle<E>,
-    pub live_selector: ESSelector<E>,
-    pub next_cursor: Option<ESCursor<E>>,
+    piet: PietRef<'s>,
+    window_handle: &'s mut WindowHandle,
+    pub next_cursor: &'s mut Option<ESCursor<E>>,
+    pub bounds: Bounds,
+    pub viewport: Bounds,
+    pub style: EStyle<E>,
+    pub selector: ESSelector<E>,
+    pub force: bool,
 }
+
+impl<'s,E> Render<'s,E> where E: Env, ESCursor<E>: IntoGuionDruidShellCursor<E> {
+    pub fn new<'b>(window_handle: &'s mut WindowHandle, piet: &'s mut Piet<'b>, next_cursor: &'s mut Option<ESCursor<E>>, dim: (u32,u32)) -> Self where 'b: 's {
+        Self {
+            piet: PietRef::new(piet),
+            bounds: Bounds::from_xywh(0,0,dim.0,dim.1),
+            viewport: Bounds::from_xywh(0,0,dim.0,dim.1),
+            style: Default::default(),
+            selector: Default::default(),
+            next_cursor,
+            force: false,
+            window_handle,
+        }
+    }
+
+    pub(crate) fn pre(&mut self) {
+        let r = unsafe{self.piet.get()};
+        r.save().unwrap();
+    }
+    pub(crate) fn post(&mut self) {
+        let c = self.next_cursor.take().unwrap_or_default().into_druid_shell_cursor();
+        self.window_handle.set_cursor(&c);
+        let r = unsafe{self.piet.get()};
+        r.restore().unwrap();
+        while let Err(e) = r.status() {
+            eprintln!("Render Error: {}",e);
+        }
+    }
+
+    pub(crate) fn fork<'y,'z>(&'y mut self) -> Render<'z,E> where 's: 'z, 's: 'y, 'y: 'z {
+        Render {
+            piet: self.piet.fork(),
+            window_handle: self.window_handle,
+            bounds: self.bounds.clone(),
+            viewport: self.viewport.clone(),
+            style: self.style.clone(),
+            selector: self.selector.clone(),
+            next_cursor: self.next_cursor,
+            force: self.force,
+        }
+    }
+}
+
 pub struct PietRef<'s> {
     piet: &'s mut Piet<'static>,
 }
 
 impl<'s> PietRef<'s> {
     pub fn new<'l>(piet: &'s mut Piet<'l>) -> Self where 'l: 's {
-        //Self{piet: unsafe{&mut *(piet as &mut Piet<'l> as *mut Piet<'l> as *mut Piet<'static>)}}
-        todo!()
+        Self{piet: unsafe{&mut *std::mem::transmute::<_,*mut Piet<'static>>(piet as &mut Piet<'l> as *mut Piet<'l>)}}
     }
 
     pub unsafe fn get(&mut self) -> &mut Piet<'static> {
-        //self.piet
-        todo!()
+        self.piet
+    }
+
+    pub fn fork<'z>(&'z mut self) -> PietRef<'z> where 's: 'z {
+        PietRef {
+            piet: self.piet,
+        }
     }
 }
 
@@ -61,10 +111,10 @@ pub(crate) fn color2color(c: impl guion::style::color::Color) -> piet::Color {
 
 impl<'s,E> AsRefMut<Render<'s,E>> for Render<'s,E> where E: Env {
     fn as_ref(&self) -> &Render<'s,E> {
-        todo!()
+        self
     }
 
     fn as_mut(&mut self) -> &mut Render<'s,E> {
-        todo!()
+        self
     }
 }

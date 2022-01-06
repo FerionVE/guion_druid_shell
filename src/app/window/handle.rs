@@ -1,16 +1,18 @@
+use druid_shell::piet::CairoTextLayout;
 use druid_shell::{WinHandler, WindowHandle};
 use guion::aliases::*;
+use guion::backend::Backend;
 use guion::env::Env;
 use guion::event::filter::StdFilter;
 use guion::event::imp::StdVarSup;
 use guion::render::widgets::RenderStdWidgets;
-use guion::style::standard::cursor::StdCursor;
 use guion::util::AsRefMut;
 
 use crate::app::ArcApp;
 use crate::app::event::BaseEvent;
 use crate::app::windows::Windows;
 use crate::render::Render;
+use crate::style::cursor::IntoGuionDruidShellCursor;
 
 pub struct WHandle<E> where E: Env {
     pub(crate) app: ArcApp<E>,
@@ -20,16 +22,18 @@ pub struct WHandle<E> where E: Env {
 
 impl<E> WinHandler for WHandle<E> where
     E: Env,
-    ECQueue<E>: AsRefMut<crate::ctx::queue::Queue<E>>,
+    for<'a> ECQueue<'a,E>: AsRefMut<crate::ctx::queue::Queue<E>>,
     //for<'a> ECQueue<'a,E>: AsRefMut<crate::ctx::queue::Queue<E>>,
     EEvent<E>: StdVarSup<E>,
     EEKey<E>: From<crate::event::key::Key>,
     EEFilter<E>: From<StdFilter<E>>,
     for<'a>  E::Storage<'a>: AsRefMut<Windows<E>>,
     for<'a> Windows<E>: AsRefMut<E::Storage<'a>>,
-    for<'a> ERenderer<'a,E>: AsRefMut<Render<'a,E>> + RenderStdWidgets<E>,
-    for<'a> Render<'a,E>: AsRefMut<ERenderer<'a,E>> + RenderStdWidgets<E>,
-    ESCursor<E>: Into<StdCursor>,  //TODO Into<DruidCursor>
+    for<'a> E::Backend: Backend<E,Renderer<'a>=Render<'a,E>>,
+    //for<'a> ERenderer<'a,E>: RenderStdWidgets<E>,
+    for<'a> Render<'a,E>: RenderStdWidgets<E>,
+    ETextLayout<E>: AsRefMut<CairoTextLayout>, //TODO use Piet trait variant
+    ESCursor<E>: IntoGuionDruidShellCursor<E>,
 {
     fn connect(&mut self, handle: &druid_shell::WindowHandle) {
         self.handle = handle.clone();

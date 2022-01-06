@@ -44,8 +44,8 @@ impl Context<ExampleEnv> for ExampleCtx {
         &self.queue
     }
 
-    fn lt_mut<'s>(&mut self) -> &mut <ExampleEnv as Env>::Context {
-        unsafe{std::mem::transmute(self)}
+    fn lt_mut<'s>(&mut self) -> &mut <ExampleEnv as Env>::Context<'_> where Self: 's {
+        self
     }
 }
 
@@ -107,7 +107,7 @@ impl DerefMut for ExampleCtx {
 }*/
 
 //TODO move to handler of different
-impl<'a> CtxClipboardAccess<ExampleEnv> for ExampleCtx {
+impl CtxClipboardAccess<ExampleEnv> for ExampleCtx {
     #[inline]
     fn clipboard_set_text(&mut self, v: &str) {
         self.ds_state.clipboard.as_mut().unwrap().put_string(v);
@@ -118,7 +118,7 @@ impl<'a> CtxClipboardAccess<ExampleEnv> for ExampleCtx {
     }
 }
 
-impl<'a> DynState<ExampleEnv> for ExampleCtx {
+impl DynState<ExampleEnv> for ExampleCtx {
     fn remote_state_or_default<T>(&self, id: StdID) -> T where T: Default + Clone + 'static {
         self.handler.remote_state_or_default(id)
     }
@@ -127,6 +127,6 @@ impl<'a> DynState<ExampleEnv> for ExampleCtx {
     }
 }
 
-fn akw22(a: &<ExampleEnv as Env>::Context) {
+fn akw22(a: &<ExampleEnv as Env>::Context<'_>) {
     let r = AsRefMut::<ExampleHandler>::as_ref(a);
 }

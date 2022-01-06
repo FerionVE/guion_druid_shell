@@ -1,5 +1,6 @@
 //! MVC-style 7gui example to increment counter
 
+use guion::env::Env;
 use guion::text::stor::TextStor;
 use guion::widget::as_widget::{AsWidget, AsWidgetMut};
 use guion::widget::resolvable::{Resolvable, ResolvableMut};
@@ -23,7 +24,7 @@ const_std_id!(RootE PaneID LabelID ButtonID ButtonLabelID);
 // Immutable immediate view, rendering and layouting done here
 impl AsWidget<ExampleEnv> for Model {
     fn as_ref(&self) -> Resolvable<ExampleEnv> {
-        Resolvable::from_widget(
+        Resolvable::<'_,ExampleEnv>::from_widget(
             Pane::new(
                 PaneID(),
                 Orientation::Horizontal,
@@ -45,9 +46,9 @@ impl AsWidgetMut<ExampleEnv> for Model {
         let count = self.count;
         
         // Closure to increment count
-        let increment = move |_: &mut _| self.count += 1; // https://github.com/rust-lang/rust/issues/81511
+        let increment = trig(move |_| self.count += 1);
 
-        ResolvableMut::from_widget(
+        ResolvableMut::<'_,ExampleEnv>::from_widget(
             Pane::new(
                 PaneID(),
                 Orientation::Horizontal,
@@ -76,4 +77,9 @@ fn main() {
 
     //while app.do_events() {}
     app.run();
+}
+
+/// required to correctly infer closure type
+fn trig<E,F>(f: F) -> F where E: Env, F: for<'a,'b> FnMut(&'a mut E::Context<'b>) {
+    f
 }

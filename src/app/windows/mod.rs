@@ -62,7 +62,7 @@ impl<E> Widgets<E> for Windows<E> where E: Env, for<'a> E::Storage<'a>: AsRefMut
         )
     }
 
-    fn trace_bounds(&self, ctx: &mut E::Context, i: E::WidgetPath, b: &Bounds, e: &EStyle<E>, force: bool) -> Result<Bounds,E::Error> {
+    fn trace_bounds(&self, ctx: &mut E::Context<'_>, i: E::WidgetPath, b: &Bounds, e: &EStyle<E>, force: bool) -> Result<Bounds,E::Error> {
         let l = ctx.link(Resolved{
             wref: AWidget::Ref(self.base()),
             path: WidgetPath::empty(),

@@ -223,7 +223,7 @@ impl<E> TxtLayout<E> for Glyphs where E: Env {
 }
 
 impl<E> ToTextLayout<Glyphs,E> for str where E: Env {
-    fn to_text_layout(&self, c: &mut E::Context) -> Glyphs {
+    fn to_text_layout(&self, c: &mut E::Context<'_>) -> Glyphs {
         Glyphs {
             text: CairoText::new()
                 .new_text_layout(self.to_owned())
@@ -233,27 +233,27 @@ impl<E> ToTextLayout<Glyphs,E> for str where E: Env {
         }
     }
 
-    fn update_text_layout(&self, s: &mut Glyphs, c: &mut E::Context) {
+    fn update_text_layout(&self, s: &mut Glyphs, c: &mut E::Context<'_>) {
         *s = <str as ToTextLayout::<Glyphs,E>>::to_text_layout(self,c)
     }
 }
 
 impl<E> ToTextLayout<Glyphs,E> for String where E: Env {
-    fn to_text_layout(&self, c: &mut E::Context) -> Glyphs {
+    fn to_text_layout(&self, c: &mut E::Context<'_>) -> Glyphs {
         <str as ToTextLayout<Glyphs,E>>::to_text_layout(self,c)
     }
 
-    fn update_text_layout(&self, s: &mut Glyphs, c: &mut E::Context) {
+    fn update_text_layout(&self, s: &mut Glyphs, c: &mut E::Context<'_>) {
         *s =  <str as ToTextLayout<Glyphs,E>>::to_text_layout(self,c)
     }
 }
 
 impl<E> ToTextLayout<Glyphs,E> for u32 where E: Env { //TODO should the way of rendering numbers be provided by guion or by the backend?
-    fn to_text_layout(&self, c: &mut E::Context) -> Glyphs {
+    fn to_text_layout(&self, c: &mut E::Context<'_>) -> Glyphs {
         <str as ToTextLayout<Glyphs,E>>::to_text_layout(&self.to_string(),c)
     }
 
-    fn update_text_layout(&self, s: &mut Glyphs, c: &mut E::Context) {
+    fn update_text_layout(&self, s: &mut Glyphs, c: &mut E::Context<'_>) {
         *s =  <str as ToTextLayout<Glyphs,E>>::to_text_layout(&self.to_string(),c)
     }
 }

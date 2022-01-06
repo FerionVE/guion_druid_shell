@@ -1,3 +1,4 @@
+use guion::env::Env;
 use guion::text::stor::TextStor;
 use guion::text::stor::TextStorMut;
 use guion::util::sma::SMA;
@@ -42,7 +43,7 @@ const_std_id!(RootE PaneID HPane ButtonUndo ButtonRedo LabelUndo LabelRedo TBox 
 
 impl AsWidget<ExampleEnv> for Model {
     fn as_ref(&self) -> Resolvable<ExampleEnv> {
-        Resolvable::from_widget(
+        Resolvable::<'_,ExampleEnv>::from_widget(
             Pane::new(
                 PaneID(),
                 Orientation::Vertical,
@@ -96,23 +97,23 @@ impl AsWidgetMut<ExampleEnv> for Model {
             model.current_entry = model.history.len()-1;
         });
 
-        let undo = move |_: &mut _| { // https://github.com/rust-lang/rust/issues/81511
+        let undo = trig(move |_| { // https://github.com/rust-lang/rust/issues/81511
             let model = &mut *sma_b.borrow_mut();
 
             model.current_entry = model.current_entry.saturating_sub(1);
 
             model.restore();
-        };
+        });
 
-        let redo = move |_: &mut _| { // https://github.com/rust-lang/rust/issues/81511
+        let redo = trig(move |_| { // https://github.com/rust-lang/rust/issues/81511
             let mut model = sma_c.borrow_mut();
 
             model.current_entry = model.history.len().saturating_sub(1).min( model.current_entry +1 );
 
             model.restore();
-        };
+        });
 
-        ResolvableMut::from_widget(
+        ResolvableMut::<'_,ExampleEnv>::from_widget(
             Pane::new(
                 PaneID(),
                 Orientation::Vertical,
@@ -164,4 +165,9 @@ fn main() {
 
     //while app.do_events() {}
     app.run();
+}
+
+/// required to correctly infer closure type
+fn trig<E,F>(f: F) -> F where E: Env, F: for<'a,'b> FnMut(&'a mut E::Context<'b>) {
+    f
 }

@@ -18,7 +18,7 @@ macro_rules! unsafe_piet {
 impl<E> GRender<E> for Render<E> where
     E: Env,
     for<'a> ERenderer<'a,E>: AsRefMut<Self>,
-    ESCursor<E>: Into<StdCursor>,  //TODO Into<DruidCursor>
+    ESCursor<E>: IntoGuionDruidShellCursor<E>,
 {
     #[inline]
     fn _style(&self) -> &EStyle<E> {
@@ -64,10 +64,10 @@ impl<E> RenderStdWidgets<E> for Render<E> where
     E: Env + Sync,
     ERenderer<E>: AsRefMut<Self>,
     ETextLayout<E>: AsRefMut<CairoTextLayout>, //TODO use Piet trait variant
-    ESCursor<E>: Into<StdCursor>,  //TODO Into<DruidCursor>
+    ESCursor<E>: IntoGuionDruidShellCursor<E>,
 {
     #[inline]
-    fn fill_rect(&mut self, c: &mut E::Context) {
+    fn fill_rect(&mut self, c: &mut E::Context<'_>) {
         let r = unsafe_piet!(self);
         let rect = bounds2rect(self.live_bounds);
         let color = self.live_style.color(&self.live_selector,c);
@@ -76,7 +76,7 @@ impl<E> RenderStdWidgets<E> for Render<E> where
         r.fill(rect,&brush);
     }
     #[inline]
-    fn fill_border_inner(&mut self, c: &mut E::Context) {
+    fn fill_border_inner(&mut self, c: &mut E::Context<'_>) {
         let r = unsafe_piet!(self);
         let rect = bounds2rect(self.live_bounds);
         let color = self.live_style.color(&self.live_selector,c);
@@ -88,7 +88,7 @@ impl<E> RenderStdWidgets<E> for Render<E> where
         r.stroke(rect,&brush,thickness as f64); //TODO guion thickness goes to inside, how does piet?
     }
     /*#[inline]
-    fn render_text(&mut self, b: &Bounds, text: &str, align: (f32,f32), style: &EStyle<E>, variant: &EStyle<E>, ctx: &mut E::Context) {
+    fn render_text(&mut self, b: &Bounds, text: &str, align: (f32,f32), style: &EStyle<E>, variant: &EStyle<E>, ctx: &mut E::Context<'_>) {
         let (glyphs,bounds) = 
             glyphs_of_str(&ctx.as_ref().font,Scale::uniform(24.0), std::i32::MAX as u32, text);
         
@@ -103,7 +103,7 @@ impl<E> RenderStdWidgets<E> for Render<E> where
         }
     }*/
     #[inline]
-    fn render_preprocessed_text(&mut self, text: &ETextLayout<E>, inner_offset: Offset, c: &mut E::Context) {
+    fn render_preprocessed_text(&mut self, text: &ETextLayout<E>, inner_offset: Offset, c: &mut E::Context<'_>) {
         let r = unsafe_piet!(self);
         let rect = bounds2rect(self.live_bounds);
         let color = self.live_style.color(&self.live_selector,c);
@@ -115,12 +115,12 @@ impl<E> RenderStdWidgets<E> for Render<E> where
         }).unwrap();
     }
     #[inline]
-    fn set_cursor(&mut self, c: &mut E::Context) {
+    fn set_cursor(&mut self, c: &mut E::Context<'_>) {
         let cursor = self.live_style.cursor(&self.live_selector,c);
         self.set_cursor_specific(&cursor,c);
     }
 
-    fn set_cursor_specific(&mut self, cursor: &ESCursor<E>, _: &mut E::Context) {
+    fn set_cursor_specific(&mut self, cursor: &ESCursor<E>, _: &mut E::Context<'_>) {
         self.next_cursor = Some(cursor.clone());
     }
 }

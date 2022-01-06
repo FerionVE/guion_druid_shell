@@ -9,7 +9,7 @@ use super::windows::Windows;
 
 impl<E> App<E> where
     E: Env,
-    ECQueue<E>: AsRefMut<crate::ctx::queue::Queue<E>>,
+    for<'a> ECQueue<'a,E>: AsRefMut<crate::ctx::queue::Queue<E>>,
     for<'a> E::Storage<'a>: AsRefMut<Windows<E>>,
     for<'a> Windows<E>: AsRefMut<E::Storage<'a>>,
 {

@@ -22,7 +22,7 @@ const_std_id!(PaneID TextC LabelC LabelF TextF);
 
 impl AsWidget<ExampleEnv> for Model {
     fn as_ref(&self) -> Resolvable<ExampleEnv> {
-        Resolvable::from_widget(
+        Resolvable::<'_,ExampleEnv>::from_widget(
             Pane::new(
                 PaneID(),
                 Orientation::Horizontal,
@@ -50,7 +50,7 @@ impl AsWidgetMut<ExampleEnv> for Model {
         let sma_a = sma.fork();
         let sma_b = sma.fork();
 
-        ResolvableMut::from_widget(
+        ResolvableMut::<'_,ExampleEnv>::from_widget(
             Pane::new(
                 PaneID(),
                 Orientation::Horizontal,

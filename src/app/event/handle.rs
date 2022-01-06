@@ -20,7 +20,7 @@ use super::BaseEvent;
 
 impl<E> ArcApp<E> where
     E: Env,
-    ECQueue<E>: AsRefMut<crate::ctx::queue::Queue<E>>,
+    for<'a> ECQueue<'a,E>: AsRefMut<crate::ctx::queue::Queue<E>>,
     EEvent<E>: StdVarSup<E>,
     EEKey<E>: From<Key>,
     EEFilter<E>: From<StdFilter<E>>,
@@ -172,7 +172,7 @@ impl<E> ArcApp<E> where
 
 impl<E> App<E> where
     E: Env,
-    ECQueue<E>: AsRefMut<crate::ctx::queue::Queue<E>>,
+    for<'a> ECQueue<'a,E>: AsRefMut<crate::ctx::queue::Queue<E>>,
     EEvent<E>: StdVarSup<E>,
     EEKey<E>: From<Key>,
     EEFilter<E>: From<StdFilter<E>>,

@@ -25,7 +25,7 @@ pub struct Render<E> where E: Env {
 
 impl<E> Render<E> where
     E: Env,
-    ESCursor<E>: Into<StdCursor>,  //TODO Into<DruidCursor>
+    ESCursor<E>: IntoGuionDruidShellCursor<E>,
 {
     pub(crate) fn scoped<'s,'l:'s,R>(window_handle: WindowHandle, piet: &'s mut Piet<'l>, f: impl FnOnce(&mut Self)->R) -> R {
         let p = piet as *mut Piet;

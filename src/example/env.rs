@@ -18,7 +18,7 @@ use crate::render::Render;
 use crate::style::Style;
 use crate::style::font::Glyphs;
 
-use super::ctx::{ExampleCtx, ExampleHandler};
+use super::ctx::ExampleCtx;
 use super::valid::ExampleValidState;
 
 #[derive(Clone,PartialEq,Default)]
@@ -28,7 +28,7 @@ pub struct ExampleBackend;
 
 impl Env for ExampleEnv {
     type Backend = ExampleBackend;
-    type Context = ExampleCtx;
+    type Context<'a> = ExampleCtx;
     type Storage<'a> = Windows<Self>;
     type WidgetID = StdID;
     type WidgetPath = ExamplePath;

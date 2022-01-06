@@ -8,9 +8,9 @@ license = "MIT" # Apache-2.0
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-guion = { git = "https://github.com/FerionVE/guion", rev = "5d6dc19c" }
+guion = { git = "https://github.com/FerionVE/guion", rev = "442c5dc2" }
 #guion = { path = "../guion" }
-druid-shell = { git = "https://github.com/linebender/druid", rev = "14fd8fde" }
+druid-shell = { git = "https://github.com/linebender/druid", rev = "d5485ee6" }
 
 [profile.release]
 codegen-units = 1
