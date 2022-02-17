@@ -21,14 +21,12 @@ pub struct WHandle<E> where E: Env {
 }
 
 impl<E> WinHandler for WHandle<E> where
-    E: Env,
+    for<'a,'b> E: Env<RootRef<'a>=&'a Windows<E>,RootMut<'b>=&'b mut Windows<E>>,
     for<'a> ECQueue<'a,E>: AsRefMut<crate::ctx::queue::Queue<E>>,
     //for<'a> ECQueue<'a,E>: AsRefMut<crate::ctx::queue::Queue<E>>,
     EEvent<E>: StdVarSup<E>,
     EEKey<E>: From<crate::event::key::Key>,
     EEFilter<E>: From<StdFilter<E>>,
-    for<'a>  E::Storage<'a>: AsRefMut<Windows<E>>,
-    for<'a> Windows<E>: AsRefMut<E::Storage<'a>>,
     for<'a> E::Backend: Backend<E,Renderer<'a>=Render<'a,E>>,
     //for<'a> ERenderer<'a,E>: RenderStdWidgets<E>,
     for<'a> Render<'a,E>: RenderStdWidgets<E>,

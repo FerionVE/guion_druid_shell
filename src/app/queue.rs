@@ -2,16 +2,13 @@ use guion::aliases::ECQueue;
 use guion::ctx::{Context, queue::*};
 use guion::env::Env;
 use guion::util::AsRefMut;
-use guion::widget::root::Widgets;
 
 use super::App;
 use super::windows::Windows;
 
 impl<E> App<E> where
-    E: Env,
+    for<'a,'b> E: Env<RootRef<'a>=&'a Windows<E>,RootMut<'b>=&'b mut Windows<E>>,
     for<'a> ECQueue<'a,E>: AsRefMut<crate::ctx::queue::Queue<E>>,
-    for<'a> E::Storage<'a>: AsRefMut<Windows<E>>,
-    for<'a> Windows<E>: AsRefMut<E::Storage<'a>>,
 {
     #[allow(unreachable_code)]
     pub(crate) fn do_queued(&mut self, pass: StdOrder) {
@@ -24,10 +21,11 @@ impl<E> App<E> where
             for (e,_) in queue {
                 match e {
                     StdEnqueueable::InvalidateWidget { path } => {
-                        invalidate::<E>(stor, path.clone()).expect("Lost Widget in invalidate");
+                        //TODO fix validationions
+                        //invalidate::<E>(stor, path.clone()).expect("Lost Widget in invalidate");
                     },
                     StdEnqueueable::ValidateWidgetRender { path } => {
-                        validate::<E>(stor, path.clone()).expect("Lost Widget in invalidate");
+                        //validate::<E>(stor, path.clone()).expect("Lost Widget in invalidate");
                     },
                     StdEnqueueable::ValidateWidgetSize { path, size } => todo!(),
                     StdEnqueueable::Render { force } => {
@@ -35,27 +33,28 @@ impl<E> App<E> where
                         //TODO Path and invalidate Window (here and not through force_render)
                     },
                     StdEnqueueable::Event { event, ts } => todo!(),
-                    StdEnqueueable::MutateWidget { path, f } => {
-                        let w = stor.widget_mut(path.clone()).expect("TODO");
-                        f(w.wref,c,path);
-                    },
-                    StdEnqueueable::MutateWidgetClosure { path, f } => {
-                        let w = stor.widget_mut(path.clone()).expect("TODO");
-                        f(w.wref,c,path);
-                    },
+                    // StdEnqueueable::MutateWidget { path, f } => {
+                    //     let w = stor.widget_mut(path.clone()).expect("TODO");
+                    //     f(w.wref,c,path);
+                    // },
+                    // StdEnqueueable::MutateWidgetClosure { path, f } => {
+                    //     let w = stor.widget_mut(path.clone()).expect("TODO");
+                    //     f(w.wref,c,path);
+                    // },
                     StdEnqueueable::MutateRoot { f } => {
-                        f(stor,c)
+                        f(stor,&(),c)
                     },
                     StdEnqueueable::MutateRootClosure { f } => {
-                        f(stor,c)
+                        f(stor,&(),c)
                     },
                     StdEnqueueable::AccessWidget { path, f } => todo!(),
                     StdEnqueueable::AccessWidgetClosure { path, f } => todo!(),
                     StdEnqueueable::AccessRoot { f } => todo!(),
                     StdEnqueueable::AccessRootClosure { f } => todo!(),
                     StdEnqueueable::MutMessage { path, msg } => {
-                        let mut w = stor.widget_mut(path.clone()).expect("TODO");
-                        w.message(msg)
+                        todo!()
+                        // let mut w = stor.widget_mut(path.clone()).expect("TODO");
+                        // w.message(msg)
                     },
                 }
             }

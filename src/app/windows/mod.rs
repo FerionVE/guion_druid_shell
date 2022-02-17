@@ -1,16 +1,15 @@
-use guion::aliases::{ESize, EStyle, ERenderer};
+use guion::aliases::{ESize, EStyle, ERenderer, WidgetRef};
 use guion::ctx::Context;
 use guion::env::Env;
 use guion::event::compound::EventCompound;
 use guion::path::WidgetPath;
+use guion::root::{RootRef, RootMut};
 use guion::util::AsRefMut;
 use guion::util::bounds::Bounds;
-use guion::widget::imp::{AWidget, AWidgetMut};
+use guion::widget::as_widget::{WCow, AsWidget, DynWCow};
 use guion::widget::link::Link;
-use guion::widget::resolvable::ResolvableMut;
-use guion::widget::{WBaseMut, Widget, WidgetMut};
-use guion::widget::resolved::{Resolved, ResolvedMut};
-use guion::widget::root::{Widgets, resolve_in_root, resolve_in_root_mut};
+use guion::widget::{Widget};
+use guion::widget::resolved::{Resolved};
 
 use super::window::Window;
 
@@ -21,64 +20,83 @@ pub struct Windows<E> where E: Env {
 
 // impl WidgetRoot
 
-impl<E> Windows<E> where E: Env, for<'a> E::Storage<'a>: AsRefMut<Self>, for<'a> Self: AsRefMut<E::Storage<'a>> {
-    pub(crate) fn path_of_window(&self, window: usize) -> E::WidgetPath {
-        (*self.windows[window].widget).as_ref().in_parent_path(WidgetPath::empty(),true) //TODO empty default constructor for path
+impl<E> Windows<E> where for<'a,'b> E: Env<RootRef<'a>=&'a Windows<E>,RootMut<'b>=&'b mut Windows<E>> {
+    pub(crate) fn path_of_window(&self, window: usize, ctx: &mut E::Context<'_>) -> E::WidgetPath {
+        (*self.windows[window].widget).view(self,ctx).in_parent_path(WidgetPath::empty()) //TODO empty default constructor for path
     }
 
     pub fn resolved(&self) -> Resolved<E> {
         Resolved{
-            wref: AWidget::Ref(self as &dyn Widget<E>),
+            wref: WCow::Borrowed(self as &dyn Widget<E>),
             path: WidgetPath::empty(),
             direct_path: WidgetPath::empty(),
-            stor: self.as_ref(),
-        }
-    }
-    pub fn resolved_mut(&mut self) -> ResolvedMut<E> {
-        ResolvedMut{
-            wref: AWidgetMut::Mut(self as &mut dyn WidgetMut<E>),
-            path: WidgetPath::empty(),
-            direct_path: WidgetPath::empty(),
+            root: self,
         }
     }
 }
 
-impl<E> Widgets<E> for Windows<E> where E: Env, for<'a> E::Storage<'a>: AsRefMut<Self>, for<'a> Self: AsRefMut<E::Storage<'a>> {
-    fn widget(&self, i: E::WidgetPath) -> Result<Resolved<E>,E::Error> {
-        resolve_in_root(
-            self,
-            i.clone(),
-            i,
-            self.as_ref()
-        )
+impl<'g,E> RootRef<E> for &'g Windows<E> where for<'a,'b> E: Env<RootRef<'a>=&'a Windows<E>,RootMut<'b>=&'b mut Windows<E>> {
+    fn fork<'s,'w:'s>(&'s self) -> <E as Env>::RootRef<'w> where Self: 'w {
+        self
     }
 
-    fn widget_mut(&mut self, i: E::WidgetPath) -> Result<ResolvedMut<E>,E::Error> {
-        resolve_in_root_mut(
-            self.as_mut(),
-            |s| AsRefMut::<Self>::as_mut(s) as &mut dyn WidgetMut<_>,
-            i.clone(),
-            i
-        )
+    fn widget<'s,'w:'s>(&'s self, i: E::WidgetPath, ctx: &mut E::Context<'_>) -> Result<Resolved<'w,E>,E::Error> where Self: 'w {
+        let wref = self.resolve(i.clone(),self,ctx)?;
+
+        Ok(Resolved {
+            wref,
+            path: i.clone(),
+            direct_path: i,
+            root: self,
+        })
     }
 
-    fn trace_bounds(&self, ctx: &mut E::Context<'_>, i: E::WidgetPath, b: &Bounds, e: &EStyle<E>, force: bool) -> Result<Bounds,E::Error> {
-        let l = ctx.link(Resolved{
-            wref: AWidget::Ref(self.base()),
-            path: WidgetPath::empty(),
-            direct_path: WidgetPath::empty(),
-            stor: self.as_ref(),
-        });
-        Widget::trace_bounds(self,l,i,b,e,force)
-    }
-
-    fn lt_ref<'l,'r,'s>(&'r self) -> &'r E::Storage<'s> where 's: 'r, 'l: 'r, 'l: 's, Self: 'l {
-        self.as_ref()
-    }
-    fn lt_mut<'l,'r,'s>(&'r mut self) -> &'r mut E::Storage<'s> where 's: 'r, 'l: 'r, 'l: 's, Self: 'l {
-        self.as_mut()
+    fn trace_bounds(&self, ctx: &mut <E as Env>::Context<'_>, i: <E as Env>::WidgetPath, b: &Bounds, e: &EStyle<E>, force: bool) -> Result<Bounds,<E as Env>::Error> {
+        todo!()
     }
 }
+impl<'g,E> RootMut<E> for &'g mut Windows<E> where for<'a,'b> E: Env<RootRef<'a>=&'a Windows<E>,RootMut<'b>=&'b mut Windows<E>> {
+    fn fork<'s>(&'s mut self) -> <E as Env>::RootMut<'s> where Self: 's {
+        self
+    }
+}
+
+// impl<E> Widgets<E> for Windows<E> where for<'a,'b> E: Env<RootRef<'a>=&'a Windows<E>,RootMut<'b>=&'b mut Windows<E>> {
+//     fn widget(&self, i: E::WidgetPath) -> Result<Resolved<E>,E::Error> {
+//         resolve_in_root(
+//             self,
+//             i.clone(),
+//             i,
+//             self.as_ref()
+//         )
+//     }
+
+//     fn widget_mut(&mut self, i: E::WidgetPath) -> Result<ResolvedMut<E>,E::Error> {
+//         resolve_in_root_mut(
+//             self.as_mut(),
+//             |s| AsRefMut::<Self>::as_mut(s) as &mut dyn WidgetMut<_>,
+//             i.clone(),
+//             i
+//         )
+//     }
+
+//     fn trace_bounds(&self, ctx: &mut E::Context<'_>, i: E::WidgetPath, b: &Bounds, e: &EStyle<E>, force: bool) -> Result<Bounds,E::Error> {
+//         let l = ctx.link(Resolved{
+//             wref: AWidget::Ref(self.base()),
+//             path: WidgetPath::empty(),
+//             direct_path: WidgetPath::empty(),
+//             stor: self.as_ref(),
+//         });
+//         Widget::trace_bounds(self,l,i,b,e,force)
+//     }
+
+//     fn lt_ref<'l,'r,'s>(&'r self) -> &'r E::Storage<'s> where 's: 'r, 'l: 'r, 'l: 's, Self: 'l {
+//         self.as_ref()
+//     }
+//     fn lt_mut<'l,'r,'s>(&'r mut self) -> &'r mut E::Storage<'s> where 's: 'r, 'l: 'r, 'l: 's, Self: 'l {
+//         self.as_mut()
+//     }
+// }
 
 impl<E> Widget<E> for Windows<E> where E: Env {
     fn id(&self) -> E::WidgetID {
@@ -111,17 +129,17 @@ impl<E> Widget<E> for Windows<E> where E: Env {
         self.windows.len()
     }
 
-    fn child<'s>(&'s self, i: usize) -> Result<guion::widget::resolvable::Resolvable<'s,E>,()> {
+    fn child<'s>(&'s self, i: usize, root: E::RootRef<'s>, ctx: &mut E::Context<'_>) -> Result<WidgetRef<'s,E>,()> {
         self.windows.get(i)
-            .map(|w| (*w.widget).as_ref() )
+            .map(|w| WCow::Owned( (*w.widget).view(root,ctx) ) )
             .ok_or(())
     }
 
-    fn into_child<'s>(self: Box<Self>, _: usize) -> Result<guion::widget::resolvable::Resolvable<'s,E>,()> where Self: 's {
+    fn into_child<'s>(self: Box<Self>, i: usize, root: E::RootRef<'_>, ctx: &mut E::Context<'_>) -> Result<WidgetRef<'s,E>,()> where Self: 's {
         unimplemented!()
     }
 
-    fn into_childs<'w>(self: Box<Self>) -> Vec<guion::widget::resolvable::Resolvable<'w,E>> where Self: 'w {
+    fn into_childs<'s>(self: Box<Self>, root: E::RootRef<'_>, ctx: &mut E::Context<'_>) -> Vec<WidgetRef<'s,E>> where Self: 's {
         unimplemented!()
     }
 
@@ -136,20 +154,33 @@ impl<E> Widget<E> for Windows<E> where E: Env {
     }
 }
 
-impl<E> WidgetMut<E> for Windows<E> where E: Env {
-    fn child_mut(&mut self, i: usize) -> Result<ResolvableMut<E>,()> {
-        self.windows.get_mut(i)
-            .map(|w| (*w.widget).as_mut() )
-            .ok_or(())
+impl<E> AsWidget<E> for Windows<E> where E: Env {
+    type Widget = Self;
+    type WidgetOwned = Self;
+
+    #[inline]
+    fn as_widget<'w>(&'w self, _: <E as Env>::RootRef<'_>, _: &mut <E as Env>::Context<'_>) -> WCow<'w,Self::Widget,Self::WidgetOwned> where Self: 'w {
+        WCow::Borrowed(self)
     }
-    fn into_child_mut<'w>(self: Box<Self>, _: usize) -> Result<ResolvableMut<'w,E>,()> where Self: 'w {
-        unimplemented!()
+    #[inline]
+    fn into_widget<'w>(self, _: <E as Env>::RootRef<'_>, _: &mut <E as Env>::Context<'_>) -> WCow<'w,Self::Widget,Self::WidgetOwned> where Self: Sized + 'w {
+        WCow::Owned(self)
     }
-    fn childs_mut(&mut self) -> Vec<ResolvableMut<E>> {
-        unimplemented!()
+    #[inline]
+    fn box_into_widget<'w>(self: Box<Self>, _: <E as Env>::RootRef<'_>, _: &mut <E as Env>::Context<'_>) -> WCow<'w,Self::Widget,Self::WidgetOwned> where Self: 'w {
+        WCow::Owned(*self)
     }
-    fn into_childs_mut<'w>(self: Box<Self>) -> Vec<ResolvableMut<'w,E>> where Self: 'w {
-        unimplemented!()
+    #[inline]
+    fn as_widget_dyn<'w,'s>(&'w self, _: <E as Env>::RootRef<'_>, _: &mut <E as Env>::Context<'_>) -> DynWCow<'w,E> where Self: 'w {
+        WCow::Borrowed(self)
+    }
+    #[inline]
+    fn into_widget_dyn<'w,'s>(self, _: <E as Env>::RootRef<'_>, _: &mut <E as Env>::Context<'_>) -> DynWCow<'w,E> where Self: Sized + 'w {
+        WCow::Owned(Box::new(self))
+    }
+    #[inline]
+    fn box_into_widget_dyn<'w,'s>(self: Box<Self>, _: <E as Env>::RootRef<'_>, _: &mut <E as Env>::Context<'_>) -> DynWCow<'w,E> where Self: 'w {
+        WCow::Owned(self)
     }
 }
 
@@ -162,3 +193,4 @@ impl<E> AsRefMut<Self> for Windows<E> where E: Env {
         self
     }
 }
+

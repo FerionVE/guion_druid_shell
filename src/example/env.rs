@@ -8,7 +8,7 @@ use guion::layout::StdGonstraints;
 use guion::path::standard::SimplePath;
 use guion::util::AsRefMut;
 use guion::util::error::GuionError;
-use guion::widget::as_widget::{AsWidget, AsWidgetMut};
+use guion::widget::as_widget::{AsWidget};
 use std::any::Any;
 use std::fmt::Debug;
 
@@ -29,7 +29,8 @@ pub struct ExampleBackend;
 impl Env for ExampleEnv {
     type Backend = ExampleBackend;
     type Context<'a> = ExampleCtx;
-    type Storage<'a> = Windows<Self>;
+    type RootRef<'a> = &'a Windows<Self>;
+    type RootMut<'a> = &'a mut Windows<Self>;
     type WidgetID = StdID;
     type WidgetPath = ExamplePath;
     type ValidState = ExampleValidState;
@@ -64,27 +65,6 @@ impl guion::event::Destination for ExampleDest {
 //guion::impl_env_stds!(ExampleEnv);
 //guion::impl_remote_state!(u8,ExampleEnv);
 //guion::impl_as_widget_for_path!(ExampleEnv;StandardPath);
-
-impl AsWidget<ExampleEnv> for ExamplePath {
-    #[inline]
-    fn as_ref(&self) -> guion::widget::resolvable::Resolvable<ExampleEnv> {
-        guion::widget::resolvable::Resolvable::Path(self.clone().into())
-    }
-    #[inline]
-    fn into_ref<'w>(self) -> guion::widget::resolvable::Resolvable<'w,ExampleEnv> where Self: 'w {
-        guion::widget::resolvable::Resolvable::Path(self.clone().into())
-    }
-}
-impl AsWidgetMut<ExampleEnv> for ExamplePath {
-    #[inline]
-    fn as_mut(&mut self) -> guion::widget::resolvable::ResolvableMut<ExampleEnv> {
-        guion::widget::resolvable::ResolvableMut::Path(self.clone().into())
-    }
-    #[inline]
-    fn into_mut<'w>(self) -> guion::widget::resolvable::ResolvableMut<'w,ExampleEnv> where Self: 'w {
-        guion::widget::resolvable::ResolvableMut::Path(self.clone().into())
-    }
-}
 
 /*impl AsWidget<ExampleEnv> for <ExampleEnv as Env>::WidgetPath {
     #[inline]

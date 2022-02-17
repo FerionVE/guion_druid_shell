@@ -1,12 +1,14 @@
 use guion::ctx::Context;
 use guion::ctx::clipboard::CtxClipboardAccess;
 use guion::env::Env;
+use guion::handler::HandlerBuilder;
 use guion::handler::standard::StdHandler;
 use guion::id::standard::StdID;
 use guion::state::CtxStdState;
 use guion::state::dyn_state::DynState;
 use guion::util::AsRefMut;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use crate::ctx::queue::Queue;
 use crate::ctx::state::DSState;
@@ -46,6 +48,10 @@ impl Context<ExampleEnv> for ExampleCtx {
 
     fn lt_mut<'s>(&mut self) -> &mut <ExampleEnv as Env>::Context<'_> where Self: 's {
         self
+    }
+
+    fn build_handler() -> <Self::Handler as guion::handler::HandlerBuilder<ExampleEnv>>::Built where Self: Sized {
+        <ExampleHandler as HandlerBuilder<ExampleEnv>>::build(Arc::new(move |c| &mut c.handler ))
     }
 }
 

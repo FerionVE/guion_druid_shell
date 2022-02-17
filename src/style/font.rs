@@ -7,7 +7,6 @@ use guion::validation::validated::Validated;
 use render::rect2bounds;
 use guion::util::bounds::{Bounds, Offset};
 use guion::util::{bounds::Dims};
-use guion::widget::cast::Statize;
 use druid_shell::piet::TextLayout;
 use crate::render::offset2point;
 
@@ -256,10 +255,6 @@ impl<E> ToTextLayout<Glyphs,E> for u32 where E: Env { //TODO should the way of r
     fn update_text_layout(&self, s: &mut Glyphs, c: &mut E::Context<'_>) {
         *s =  <str as ToTextLayout<Glyphs,E>>::to_text_layout(&self.to_string(),c)
     }
-}
-
-unsafe impl<E> Statize<E> for Glyphs {
-    type Statur = Glyphs;
 }
 
 impl AsRefMut<Self> for Glyphs {

@@ -8,7 +8,7 @@ use guion::style::selectag::standard::StdSelectag;
 use guion::style::standard::cursor::StdCursor;
 use guion::util::AsRefMut;
 use guion::ctx::Context;
-use guion::widget::root::Widgets;
+use guion::root::RootRef;
 
 use crate::render::Render;
 use crate::style::cursor::IntoGuionDruidShellCursor;
@@ -18,12 +18,10 @@ use super::windows::Windows;
 
 
 impl<E> ArcApp<E> where
-    E: Env,
+for<'a,'b> E: Env<RootRef<'a>=&'a Windows<E>,RootMut<'b>=&'b mut Windows<E>>,
     //for<'a> ERenderer<'a,E>: RenderStdWidgets<E>,
     for<'a> E::Backend: Backend<E,Renderer<'a>=Render<'a,E>>,
     for<'a> Render<'a,E>: RenderStdWidgets<E>,
-    for<'a> E::Storage<'a>: AsRefMut<Windows<E>>,
-    for<'a> Windows<E>: AsRefMut<E::Storage<'a>>,
     for<'a> ECQueue<'a,E>: AsRefMut<crate::ctx::queue::Queue<E>>,
     ETextLayout<E>: AsRefMut<CairoTextLayout>, //TODO use Piet trait variant
     ESCursor<E>: IntoGuionDruidShellCursor<E>,
@@ -36,7 +34,7 @@ impl<E> ArcApp<E> where
         let s = &mut *s;
         let mut window_handle = s.windows.windows[window_id].handle.as_ref().unwrap().clone();
 
-        let path = s.windows.path_of_window(window_id);
+        let path = s.windows.path_of_window(window_id,&mut s.ctx);
         let dims = window_handle.get_size();
 
         let mut next_cursor = None;
@@ -58,7 +56,8 @@ impl<E> ArcApp<E> where
         //process queued and render
         render.force |= s.ctx.queue().as_ref().force_render;
 
-        let w = s.windows.widget(path).expect("Lost Widget in render");
+        let root: E::RootRef<'_> = &s.windows;
+        let w = root.widget(path,&mut s.ctx).expect("Lost Widget in render");
         let w = s.ctx.link(w);
         render.render_widget(w);
 

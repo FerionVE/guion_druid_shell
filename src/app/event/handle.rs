@@ -19,13 +19,11 @@ use crate::style::font::ksize2dims;
 use super::BaseEvent;
 
 impl<E> ArcApp<E> where
-    E: Env,
+    for<'a,'b> E: Env<RootRef<'a>=&'a Windows<E>,RootMut<'b>=&'b mut Windows<E>>,
     for<'a> ECQueue<'a,E>: AsRefMut<crate::ctx::queue::Queue<E>>,
     EEvent<E>: StdVarSup<E>,
     EEKey<E>: From<Key>,
     EEFilter<E>: From<StdFilter<E>>,
-    for<'a> E::Storage<'a>: AsRefMut<Windows<E>>,
-    for<'a> Windows<E>: AsRefMut<E::Storage<'a>>,
 {
     pub(crate) fn do_event(&self, window_id: usize, event: BaseEvent) -> bool {
         let mut s = self.inner.lock().unwrap();
@@ -171,13 +169,11 @@ impl<E> ArcApp<E> where
 }
 
 impl<E> App<E> where
-    E: Env,
+    for<'a,'b> E: Env<RootRef<'a>=&'a Windows<E>,RootMut<'b>=&'b mut Windows<E>>,
     for<'a> ECQueue<'a,E>: AsRefMut<crate::ctx::queue::Queue<E>>,
     EEvent<E>: StdVarSup<E>,
     EEKey<E>: From<Key>,
     EEFilter<E>: From<StdFilter<E>>,
-    for<'a> E::Storage<'a>: AsRefMut<Windows<E>>,
-    for<'a> Windows<E>: AsRefMut<E::Storage<'a>>,
 {
     fn send_event(&mut self, window_id: usize, e: EEvent<E>) -> bool {
         let e = EventCompound{
@@ -185,7 +181,7 @@ impl<E> App<E> where
             bounds: Bounds::default(),
             ts: 0, //TODO ts
             filter: StdFilter{
-                filter_path: self.windows.path_of_window(window_id),
+                filter_path: self.windows.path_of_window(window_id,&mut self.ctx),
                 filter_bounds: true,
             }.into(),
             style: Default::default(),
