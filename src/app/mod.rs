@@ -5,6 +5,7 @@ use druid_shell::{WindowBuilder, kurbo};
 use guion::aliases::*;
 use guion::backend::Backend;
 use guion::env::Env;
+use guion::error::ResolveResult;
 use guion::event::filter::StdFilter;
 use guion::event::imp::StdVarSup;
 use guion::id::WidgetIDAlloc;
@@ -74,7 +75,7 @@ impl<E> ArcApp<E> where
     pub fn add_window<W,M>(&self, f: M, widget: W) where
         W: 'static,
         M: FnOnce(&mut WindowBuilder),
-        for<'a> &'a W: View<E,Arc<dyn for<'r> Fn(E::RootMut<'r>,&'r (),&mut E::Context<'_>)->&'r mut W + 'static>>,
+        for<'a> &'a W: View<E,&'static (dyn for<'r> Fn(E::RootMut<'r>,&'r (),&mut E::Context<'_>)->ResolveResult<&'r mut W> + Send + Sync + 'static)>,
     {
         let app;
         let next_id;

@@ -1,14 +1,10 @@
 #![feature(type_alias_impl_trait)]
 //! MVC-style 7gui example to increment counter
 
-use std::sync::Arc;
-
 use guion::env::Env;
 use guion::error::ResolveResult;
-use guion::text::stor::TextStor;
 use guion::view::View;
 use guion::widget::Widget;
-use guion::widget::as_widget::{AsWidget};
 use guion::widgets::button::Button;
 use guion::widgets::label::Label;
 use guion::{const_std_id, constraint, mutor};
@@ -28,20 +24,20 @@ pub struct Model {
 const_std_id!(RootE PaneID LabelID ButtonID ButtonLabelID);
 
 // Immutable immediate view, rendering and layouting done here
-impl<'o> View<ExampleEnv,Arc<dyn for<'a> Fn(&'a mut Windows<ExampleEnv>,&'a (),&mut ExampleCtx)->&'a mut Model + 'static>> for &'o Model where
-    //MutFn: for<'a> Fn(&'a mut Windows<ExampleEnv>,&'a (),&mut ExampleCtx)->&'a mut Model + Clone + 'static,
+impl<'o,MutFn> View<ExampleEnv,MutFn> for &'o Model where
+    MutFn: for<'a> Fn(&'a mut Windows<ExampleEnv>,&'a (),&mut ExampleCtx)->ResolveResult<&'a mut Model> + Clone + Send + Sync + 'static,
 {
     type Viewed = impl Widget<ExampleEnv>;
 
-    fn view(self, remut: Arc<dyn for<'a> Fn(&'a mut Windows<ExampleEnv>,&'a (),&mut ExampleCtx)->&'a mut Model + 'static>, root: &Windows<ExampleEnv>, _: &mut ExampleCtx) -> Self::Viewed {
-        Pane::<ExampleEnv,_>::new(
+    fn view(self, mutor: MutFn, _: &Windows<ExampleEnv>, _: &mut ExampleCtx) -> Self::Viewed {
+        Pane::new(
             PaneID(),
             Orientation::Horizontal,
             (
-                Label::<ExampleEnv,_,_>::immediate(LabelID(),self.count)
+                Label::immediate(LabelID(),self.count)
                     .with_size(constraint!(~0-@2.0|24)),
                 Button::immediate(ButtonID(),Label::immediate(ButtonLabelID(),"Increment"))
-                    .with_trigger_mut(move |r,_,c| remut(r,&(),c).count += 1 ),
+                    .with_trigger_mut(mutor!(mutor =>| |s,c| s.count += 1 )),
             ),
         )
     }
