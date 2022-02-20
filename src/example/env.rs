@@ -28,7 +28,7 @@ pub struct ExampleBackend;
 
 impl Env for ExampleEnv {
     type Backend = ExampleBackend;
-    type Context<'a> = ExampleCtx;
+    type Context<'a> = ExampleCtx<'a>;
     type RootRef<'a> = &'a Windows<Self>;
     type RootMut<'a> = &'a mut Windows<Self>;
     type WidgetID = StdID;

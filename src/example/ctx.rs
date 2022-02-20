@@ -8,6 +8,7 @@ use guion::state::CtxStdState;
 use guion::state::dyn_state::DynState;
 use guion::util::AsRefMut;
 use std::collections::HashMap;
+use std::marker::PhantomData;
 use std::sync::Arc;
 
 use crate::ctx::queue::Queue;
@@ -15,25 +16,27 @@ use crate::ctx::state::DSState;
 
 use super::env::ExampleEnv;
 
-pub struct ExampleCtx {
+pub struct ExampleCtx<'cc> {
     pub handler: ExampleHandler,
     pub ds_state: DSState,
     pub queue: Queue<ExampleEnv>,
+    test: PhantomData<&'cc mut u32>,
 }
 
-impl ExampleCtx {
+impl<'cc> ExampleCtx<'cc> {
     pub fn new() -> Self {
         Self {
             handler: StdHandler::<(),ExampleEnv>::new(()),
             ds_state: DSState::new(),
             queue: Queue{queues:HashMap::new(),force_render:true},
+            test: PhantomData,
         }
     }
 }
 
 pub type ExampleHandler = StdHandler<(),ExampleEnv>;
 
-impl Context<ExampleEnv> for ExampleCtx {
+impl<'cc> Context<'cc,ExampleEnv> for ExampleCtx<'cc> {
     type Handler = ExampleHandler;
     type Queue = Queue<ExampleEnv>;
 
@@ -46,16 +49,16 @@ impl Context<ExampleEnv> for ExampleCtx {
         &self.queue
     }
 
-    fn lt_mut<'s>(&mut self) -> &mut <ExampleEnv as Env>::Context<'_> where Self: 's {
+    fn lt_mut(&mut self) -> &mut <ExampleEnv as Env>::Context<'cc> where Self: 'cc {
         self
     }
 
-    fn build_handler() -> <Self::Handler as guion::handler::HandlerBuilder<ExampleEnv>>::Built where Self: Sized {
-        <ExampleHandler as HandlerBuilder<ExampleEnv>>::build(Arc::new(move |c| &mut c.handler ))
+    fn build_handler(&mut self) -> <Self::Handler as guion::handler::HandlerBuilder<ExampleEnv>>::Built where Self: Sized {
+        <ExampleHandler as HandlerBuilder<ExampleEnv>>::build(Arc::new(move |c| &mut c.handler ),self)
     }
 }
 
-impl AsRefMut<Self> for ExampleCtx {
+impl AsRefMut<Self> for ExampleCtx<'_> {
     #[inline]
     fn as_ref(&self) -> &Self {
         self
@@ -65,7 +68,7 @@ impl AsRefMut<Self> for ExampleCtx {
         self
     }
 }
-impl AsRefMut<StdHandler<(),ExampleEnv>> for ExampleCtx {
+impl AsRefMut<StdHandler<(),ExampleEnv>> for ExampleCtx<'_> {
     #[inline]
     fn as_ref(&self) -> &ExampleHandler {
         &self.handler
@@ -75,7 +78,7 @@ impl AsRefMut<StdHandler<(),ExampleEnv>> for ExampleCtx {
         &mut self.handler
     }
 }
-impl AsRefMut<DSState> for ExampleCtx {
+impl AsRefMut<DSState> for ExampleCtx<'_> {
     #[inline]
     fn as_ref(&self) -> &DSState {
         &self.ds_state
@@ -85,7 +88,7 @@ impl AsRefMut<DSState> for ExampleCtx {
         &mut self.ds_state
     }
 }
-impl CtxStdState<ExampleEnv> for ExampleCtx {
+impl<'cc> CtxStdState<'cc,ExampleEnv> for ExampleCtx<'cc> {
     type T = ExampleHandler;
     #[inline]
     fn state_mut(&mut self) -> &mut Self::T {
@@ -113,7 +116,7 @@ impl DerefMut for ExampleCtx {
 }*/
 
 //TODO move to handler of different
-impl CtxClipboardAccess<ExampleEnv> for ExampleCtx {
+impl CtxClipboardAccess<ExampleEnv> for ExampleCtx<'_> {
     #[inline]
     fn clipboard_set_text(&mut self, v: &str) {
         self.ds_state.clipboard.as_mut().unwrap().put_string(v);
@@ -124,7 +127,7 @@ impl CtxClipboardAccess<ExampleEnv> for ExampleCtx {
     }
 }
 
-impl DynState<ExampleEnv> for ExampleCtx {
+impl DynState<ExampleEnv> for ExampleCtx<'_> {
     fn remote_state_or_default<T>(&self, id: StdID) -> T where T: Default + Clone + 'static {
         self.handler.remote_state_or_default(id)
     }
