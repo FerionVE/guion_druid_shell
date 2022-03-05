@@ -1,7 +1,10 @@
+use std::ops::Range;
+
 use druid_shell::kurbo::{self, Point};
 use druid_shell::piet::{CairoText, CairoTextLayout, Color, FontFamily, Text, TextAttribute, LineMetric};
 use druid_shell::piet::TextLayoutBuilder;
-use guion::text::layout::{Direction, TxtLayout, TxtLayoutFromStor};
+use guion::text::cursel::{Direction, TxtCurSel};
+use guion::text::layout::{TxtLayout, TxtLayoutFromStor};
 use guion::text::stor::{TextStor, ToTextLayout};
 use guion::validation::validated::Validated;
 use render::rect2bounds;
@@ -11,6 +14,7 @@ use druid_shell::piet::TextLayout;
 use crate::render::offset2point;
 
 use super::*;
+use super::cursor::Cusror;
 
 #[derive(Clone,PartialEq)]
 pub struct Font {
@@ -38,29 +42,30 @@ pub struct Glyphs {
 }
 
 impl<E> TxtLayout<E> for Glyphs where E: Env {
-    fn remove_chars(&mut self, range: std::ops::Range<usize>) {
-        todo!()
-    }
+    type CurSel = Cusror;
 
-    fn push_chars(&mut self, off: usize, chars: &str) {
-        todo!()
-    }
-
-    fn size(&self) -> Dims {
+    fn display_size(&self) -> Dims {
         ksize2dims(self.text.size())
     }
 
-    fn char_at_display(&self, p: Offset) -> usize {
+    fn bytepos_at_display(&self, p: Offset) -> usize {
         off_char(self.text.hit_test_point(offset2point(p)).idx)
     }
 
-    fn display_of_char(&self, c: usize) -> guion::util::bounds::Bounds {
+    fn display_of_bytepos(&self, c: usize) -> Bounds {
         let p = self.text.hit_test_text_position(char_off(self.text.text(),c));
         let lm = self.text.line_metric(p.line).unwrap();
         Bounds::from_xywh(p.point.x as i32, lm.y_offset as i32, 0, lm.height as u32)
     }
 
-    fn selection_bounds(&self, s: std::ops::Range<usize>) -> Vec<guion::util::bounds::Bounds> {
+    fn cursor_bounds(&self, mut s: Self::CurSel) -> Bounds {
+        TxtLayout::<E>::fix_cursor_boundaries(self,&mut s);
+        TxtLayout::<E>::display_of_bytepos(self,s.caret as usize)
+    }
+
+    fn selection_bounds(&self, mut s: Self::CurSel) -> Vec<Bounds> {
+        TxtLayout::<E>::fix_cursor_boundaries(self,&mut s);
+        let s = s.range_usize();
         let s = char_off(self.text.text(),s.start) .. char_off(self.text.text(),s.end);
         assert!(s.end >= s.start);
         self.text.rects_for_range(s).into_iter()
@@ -68,156 +73,184 @@ impl<E> TxtLayout<E> for Glyphs where E: Env {
             .collect()
     }
 
-    fn coord_of(&self, i: u32) -> Option<(u32,u32)> {
-        let i = char_off(self.text.text(),i as usize);
-        for test_line in 0..self.text.line_count() {
-            let lm = self.text.line_metric(test_line).unwrap();
-            if i >= lm.start_offset && i < lm.end_offset {
-                let h = off_char(i - lm.start_offset);
-                return Some((h as u32,test_line as u32));
-            }
-            if test_line+1 == self.text.line_count() && i >= lm.start_offset && i <= lm.end_offset {
-                let h = off_char(i - lm.start_offset);
-                return Some((h as u32,test_line as u32));
-            }
-        }
-        None
+    // fn coord_of(&self, i: u32) -> Option<(u32,u32)> {
+    //     let i = char_off(self.text.text(),i as usize);
+    //     for test_line in 0..self.text.line_count() {
+    //         let lm = self.text.line_metric(test_line).unwrap();
+    //         if i >= lm.start_offset && i < lm.end_offset {
+    //             let h = off_char(i - lm.start_offset);
+    //             return Some((h as u32,test_line as u32));
+    //         }
+    //         if test_line+1 == self.text.line_count() && i >= lm.start_offset && i <= lm.end_offset {
+    //             let h = off_char(i - lm.start_offset);
+    //             return Some((h as u32,test_line as u32));
+    //         }
+    //     }
+    //     None
+    // }
+
+    // fn at_coord(&self, (x,y): (u32,u32)) -> Option<u32> {
+    //     if let Some(lm) = self.text.line_metric(y as usize) {
+    //         let y = char_off(self.text.line_text(y as usize).unwrap(), x as usize);
+    //         let i = lm.start_offset + y;
+    //         Some(off_char(i) as u32)
+    //     } else {
+    //         None
+    //     }
+    // }
+
+    // fn cursor_pos_reverse_line_centric(&self, line: u32, x: i32) -> Option<u32> {
+    //     if let Some(lm) = self.text.line_metric(line as usize) {
+    //         let p = Point {
+    //             x: x as f64,
+    //             y: lm.y_offset + lm.baseline,
+    //         };
+    //         let p = self.text.hit_test_point(p);
+    //         let pos = p.idx - lm.start_offset;
+    //         Some(off_char(pos) as u32)
+    //     } else {
+    //         None
+    //     }
+    // }
+
+    fn move_cursor_direction(&self, mut cursor: Self::CurSel, dir: Direction, extend_selection: bool) -> Self::CurSel {
+        TxtLayout::<E>::fix_cursor_boundaries(self,&mut cursor);
+        cursor.caret = move_cursor_old(self, dir, cursor.caret as usize) as u32;
+        if !extend_selection {cursor.unselect();}
+        TxtLayout::<E>::fix_cursor_boundaries(self,&mut cursor); //TODO should be unneccesary
+        cursor
     }
 
-    fn at_coord(&self, (x,y): (u32,u32)) -> Option<u32> {
-        if let Some(lm) = self.text.line_metric(y as usize) {
-            let y = char_off(self.text.line_text(y as usize).unwrap(), x as usize);
-            let i = lm.start_offset + y;
-            Some(off_char(i) as u32)
-        } else {
-            None
-        }
-    }
-
-    fn cursor_pos_reverse_line_centric(&self, line: u32, x: i32) -> Option<u32> {
-        if let Some(lm) = self.text.line_metric(line as usize) {
-            let p = Point {
-                x: x as f64,
-                y: lm.y_offset + lm.baseline,
-            };
-            let p = self.text.hit_test_point(p);
-            let pos = p.idx - lm.start_offset;
-            Some(off_char(pos) as u32)
-        } else {
-            None
-        }
+    fn move_cursor_display(&self, mut cursor: Self::CurSel, disp_pos: Offset, extend_selection: bool) -> Self::CurSel {
+        TxtLayout::<E>::fix_cursor_boundaries(self,&mut cursor);
+        cursor.caret = TxtLayout::<E>::bytepos_at_display(self,disp_pos) as u32;
+        if !extend_selection {cursor.unselect();}
+        TxtLayout::<E>::fix_cursor_boundaries(self,&mut cursor); //TODO should be unneccesary
+        cursor
     }
 
     fn line_count(&self) -> u32 {
         self.text.line_count() as u32
     }
 
-    fn chars(&self) -> usize {
-        self.text.text().chars().count()
-    }
+    // fn chars(&self) -> usize {
+    //     self.text.text().chars().count()
+    // }
 
-    fn len(&self) -> usize {
+    fn len_bytes(&self) -> usize {
         self.text.text().len()
-    }
-
-    fn move_cursor(&self, dir: Direction, off: usize) -> usize {
-        fn line_of_char(s: &Glyphs, off: usize) -> (usize,usize,LineMetric) {
-            for test_line in 0..s.text.line_count() {
-                let lm = s.text.line_metric(test_line).unwrap();
-                if off >= lm.start_offset && off < lm.end_offset {
-                    return (test_line, off - lm.start_offset,lm);
-                }
-                if test_line+1 == s.text.line_count() && off >= lm.start_offset && off <= lm.end_offset {
-                    return (test_line, off - lm.start_offset,lm);
-                }
-            }
-            panic!()
-        }
-        fn last_char_before_in_str(s: &str, off: usize) -> usize {
-            s.char_indices()
-                .filter(|(o,_)| *o < off )
-                .last()
-                .map(|i| i.0 )
-                .unwrap_or(0)
-        }
-        fn next_char_in_str(s: &str, off: usize) -> usize {
-            s.char_indices()
-                .filter(|(o,_)| *o > off )
-                .next()
-                .map(|i| i.0 )
-                .unwrap_or(s.len())
-        }
-
-        match dir {
-            Direction::Right => {
-                let (line,_,lm) = line_of_char(self, off);
-                // if it's >= lm.end_offset, then it's on the next line
-                let nc = next_char_in_str(self.text.line_text(line).unwrap(), off - lm.start_offset) + lm.start_offset;
-                if nc > lm.end_offset && line+1 >= self.text.line_count() {
-                    off
-                } else {
-                    nc
-                }
-            },
-            Direction::Left => {
-                let (line,_,lm) = line_of_char(self, off);
-                if off > lm.start_offset {
-                    last_char_before_in_str(self.text.line_text(line).unwrap(), off - lm.start_offset) + lm.start_offset
-                } else {
-                    assert_eq!(off, lm.start_offset);
-                    if line > 0 {
-                        let lm = self.text.line_metric(line-1).unwrap();
-                        let lt = self.text.line_text(line-1).unwrap();
-                        last_char_before_in_str(lt, off - lm.start_offset) + lm.start_offset
-                    } else {
-                        0
-                    }
-                }
-            },
-            Direction::Down => {
-                let (line,_,lm) = line_of_char(self, off);
-                if line+1 >= self.text.line_count() {
-                    return lm.end_offset;
-                }
-                let dlm = self.text.line_metric(line+1).unwrap();
-                let tp = self.text.hit_test_text_position(off);
-                let rh = self.text.hit_test_point(Point{
-                    x: tp.point.x,
-                    y: dlm.y_offset + dlm.baseline, //TODO intra-line hit
-                });
-                assert_eq!(line_of_char(self,rh.idx).0, line+1);
-                rh.idx
-            },
-            Direction::Up => {
-                let (line,_,_) = line_of_char(self, off);
-                if line == 0 {
-                    return 0;
-                }
-                let dlm = self.text.line_metric(line-1).unwrap();
-                let tp = self.text.hit_test_text_position(off);
-                let rh = self.text.hit_test_point(Point{
-                    x: tp.point.x,
-                    y: dlm.y_offset + dlm.baseline, //TODO intra-line hit
-                });
-                assert_eq!(line_of_char(self,rh.idx).0, line-1);
-                rh.idx
-            },
-        }
     }
 
     fn char_len_l(&self, off: usize, chars: usize) -> usize {
         let mut oof = off;
         for _ in 0..chars {
-            oof = TxtLayout::<E>::move_cursor(self,Direction::Left,oof);
+            oof = move_cursor_old(self,Direction::Left,oof);
         }
         off - oof
     }
 
     fn fix_boundary(&self, mut off: usize) -> usize {
-        while !self.text.text().is_char_boundary(off) && off!=0 {
+        let t = self.text.text();
+        off = off.min(t.len());
+        while !t.is_char_boundary(off) && off!=0 {
             off = off.saturating_sub(1); //TODO efficient algorithm
         }
         off
+    }
+
+    fn fix_cursor_boundaries(&self, s: &mut Self::CurSel) {
+        s.caret = TxtLayout::<E>::fix_boundary(self,s.caret as usize) as u32;
+        s.select = TxtLayout::<E>::fix_boundary(self,s.select as usize) as u32;
+    }
+
+    fn sync_replace(&mut self, replace_range: Range<usize>, insert: &str) {
+        todo!()
+    }
+}
+
+// the move cursor clusterfuck
+fn move_cursor_old(s: &Glyphs, dir: Direction, off: usize) -> usize {
+    fn line_of_char(s: &Glyphs, off: usize) -> (usize,usize,LineMetric) {
+        for test_line in 0..s.text.line_count() {
+            let lm = s.text.line_metric(test_line).unwrap();
+            if off >= lm.start_offset && off < lm.end_offset {
+                return (test_line, off - lm.start_offset,lm);
+            }
+            if test_line+1 == s.text.line_count() && off >= lm.start_offset && off <= lm.end_offset {
+                return (test_line, off - lm.start_offset,lm);
+            }
+        }
+        panic!()
+    }
+    fn last_char_before_in_str(s: &str, off: usize) -> usize {
+        s.char_indices()
+            .filter(|(o,_)| *o < off )
+            .last()
+            .map(|i| i.0 )
+            .unwrap_or(0)
+    }
+    fn next_char_in_str(s: &str, off: usize) -> usize {
+        s.char_indices()
+            .filter(|(o,_)| *o > off )
+            .next()
+            .map(|i| i.0 )
+            .unwrap_or(s.len())
+    }
+
+    match dir {
+        Direction::Right => {
+            let (line,_,lm) = line_of_char(s, off);
+            // if it's >= lm.end_offset, then it's on the next line
+            let nc = next_char_in_str(s.text.line_text(line).unwrap(), off - lm.start_offset) + lm.start_offset;
+            if nc > lm.end_offset && line+1 >= s.text.line_count() {
+                off
+            } else {
+                nc
+            }
+        },
+        Direction::Left => {
+            let (line,_,lm) = line_of_char(s, off);
+            if off > lm.start_offset {
+                last_char_before_in_str(s.text.line_text(line).unwrap(), off - lm.start_offset) + lm.start_offset
+            } else {
+                assert_eq!(off, lm.start_offset);
+                if line > 0 {
+                    let lm = s.text.line_metric(line-1).unwrap();
+                    let lt = s.text.line_text(line-1).unwrap();
+                    last_char_before_in_str(lt, off - lm.start_offset) + lm.start_offset
+                } else {
+                    0
+                }
+            }
+        },
+        Direction::Down => { //TODO handle whole cursor and stick_y
+            let (line,_,lm) = line_of_char(s, off);
+            if line+1 >= s.text.line_count() {
+                return lm.end_offset;
+            }
+            let dlm = s.text.line_metric(line+1).unwrap();
+            let tp = s.text.hit_test_text_position(off);
+            let rh = s.text.hit_test_point(Point{
+                x: tp.point.x,
+                y: dlm.y_offset + dlm.baseline, //TODO intra-line hit
+            });
+            assert_eq!(line_of_char(s,rh.idx).0, line+1);
+            rh.idx
+        },
+        Direction::Up => { //TODO handle whole cursor and stick_y
+            let (line,_,_) = line_of_char(s, off);
+            if line == 0 {
+                return 0;
+            }
+            let dlm = s.text.line_metric(line-1).unwrap();
+            let tp = s.text.hit_test_text_position(off);
+            let rh = s.text.hit_test_point(Point{
+                x: tp.point.x,
+                y: dlm.y_offset + dlm.baseline, //TODO intra-line hit
+            });
+            assert_eq!(line_of_char(s,rh.idx).0, line-1);
+            rh.idx
+        },
     }
 }
 

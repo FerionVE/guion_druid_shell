@@ -1,7 +1,11 @@
 #![feature(type_alias_impl_trait)]
 
+use std::borrow::Cow;
+use std::ops::Range;
+
 use guion::env::Env;
 use guion::error::ResolveResult;
+use guion::text::stor::TextStorMut;
 use guion::view::View;
 use guion::widget::Widget;
 use guion::widgets::area::Area;
@@ -10,6 +14,7 @@ use guion::widgets::checkbox::CheckBox;
 use guion::widgets::label::Label;
 use guion::widgets::pbar::ProgressBar;
 use guion::widgets::splitpane::SplitPane;
+use guion::widgets::textbox::TextBox;
 use guion::{const_std_id, constraint, mutor};
 use guion::layout::Orientation;
 use guion::widgets::pane::Pane;
@@ -17,6 +22,7 @@ use guion_druid_shell::app::ArcApp;
 use guion_druid_shell::app::windows::Windows;
 use guion_druid_shell::example::ctx::ExampleCtx;
 use guion_druid_shell::example::env::ExampleEnv;
+use guion_druid_shell::style::cursor::Cusror;
 
 pub struct Model {
     button51_count: u32,
@@ -27,10 +33,14 @@ pub struct Model {
     progress: f32,
     splitpane: f32,
     area_scroll: (i32,i32),
+
+    tbtext: String,
+    tbscroll: (u32,u32),
+    tbcursor: Cusror,
 }
 
 // Define some persistent WidgetIDs
-const_std_id!(RootPane TopLabel Area51 Pane51 Button51 Button51Label Button52 Button52Label ProgBar Check CheckLabel Split2 ButtonA ButtonALabel ButtonB ButtonBLabel);
+const_std_id!(RootPane TopLabel Area51 Pane51 Button51 Button51Label Button52 Button52Label ProgBar Check CheckLabel Split2 ButtonA ButtonALabel ButtonB ButtonBLabel TextBoxx);
 
 // Immutable immediate view, rendering and layouting done here
 impl<'o,MutFn> View<ExampleEnv,MutFn> for &'o Model where
@@ -99,6 +109,23 @@ impl<'o,MutFn> View<ExampleEnv,MutFn> for &'o Model where
                 //TextBox::new(StdID::new()),
                 //ImmediateLabel{text:"Immediate Label".to_owned(),id:StdID::new()} ,
                 //ImmediateTextBox{text:"Immediate TextBox".to_owned(),id:StdID::new()},
+                TextBox::immediate_test(
+                    TextBoxx(),
+                    &self.tbtext,
+                    self.tbscroll,
+                    self.tbcursor,
+                    mutor!(mutor =>| |s,c,tbupd,curs| {
+                        //let tbupd: Option<(Range<usize>,Cow<'static,str>)> = tbupd;
+                        if let Some(tbupd) = tbupd {
+                            TextStorMut::<ExampleEnv>::replace(&mut s.tbtext,tbupd.0,tbupd.1.as_ref());
+                        }
+                        //let curs: Option<Cusror> = curs;
+                        if let Some(curs) = curs {
+                            s.tbcursor = curs;
+                        }
+                    } ),
+                    mutor!(mutor =>| |s,c,scroll| s.tbscroll = scroll ),
+                ),
             ),
         )
     }
@@ -120,6 +147,10 @@ fn main() {
             progress: 0.5,
             splitpane: 0.5,
             area_scroll: (0,0),
+
+            tbtext: Default::default(),
+            tbscroll: Default::default(),
+            tbcursor: Default::default(),
         },
     );
 

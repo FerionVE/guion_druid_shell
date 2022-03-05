@@ -6,3 +6,5 @@ pub mod event;
 pub mod render;
 pub mod example;
 pub mod style;
+
+pub use guion;
