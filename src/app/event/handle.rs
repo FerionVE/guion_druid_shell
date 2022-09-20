@@ -4,12 +4,15 @@ use guion::ctx::Context;
 use guion::ctx::queue::StdOrder;
 use guion::env::Env;
 use guion::event::imp::StdVarSup;
+use guion::event::variant::Variant;
+use guion::event_new::variants::StdVariant;
+use guion::handler::Handler;
+use guion::path::WidgetPath;
 use guion::util::AsRefMut;
 use guion::event::Event as GEvent;
 use guion::event::standard::variants::RootEvent;
-use guion::event::filter::StdFilter;
-use guion::event::compound::EventCompound;
 use guion::util::bounds::{Bounds, Offset};
+use guion::widget::stack::WithCurrentWidget;
 
 use crate::app::{App, ArcApp};
 use crate::app::windows::Windows;
@@ -23,9 +26,8 @@ impl<E> ArcApp<E> where
     for<'a> ECQueue<'a,E>: AsRefMut<crate::ctx::queue::Queue<E>>,
     EEvent<E>: StdVarSup<E>,
     EEKey<E>: From<Key>,
-    EEFilter<E>: From<StdFilter<E>>,
 {
-    pub(crate) fn do_event(&self, window_id: usize, event: BaseEvent) -> bool {
+    pub(crate) fn do_event(&self, window_id: usize, event: BaseEvent, ts: u64) -> bool {
         let mut s = self.inner.lock().unwrap();
         let s = &mut *s;
 
@@ -76,62 +78,63 @@ impl<E> ArcApp<E> where
                 //handled = todo!();
             }
             BaseEvent::KeyDown(key) => {
-                let e: EEvent<E> = GEvent::from(RootEvent::KbdDown{
+                let e = StdVariant::new(RootEvent::KbdDown{
                     key: Key::Kbd(key.key.clone(),key.location).into()
-                });
+                },ts);
                 eprintln!("KeyDown: {:?}",e);
-                handled |= s.send_event(window_id,e);
+                handled |= s.send_legacy_root_event(window_id,e);
                 if let druid_shell::keyboard_types::Key::Character(c) = key.key {
                     //TODO do we have to timer-simulate ongoing keypress?
-                    let e: EEvent<E> = GEvent::from(RootEvent::TextInput{
+                    let e = StdVariant::new(RootEvent::TextInput{
                         text: c,
-                    });
+                    },ts);
                     eprintln!("KeyDownTI: {:?}",e);
-                    handled |= s.send_event(window_id,e);
+                    handled |= s.send_legacy_root_event(window_id,e);
                 }
             }
             BaseEvent::KeyUp(key) => {
-                let e: EEvent<E> = GEvent::from(RootEvent::KbdUp{
+                let e = StdVariant::new(RootEvent::KbdUp{
                     key: Key::Kbd(key.key,key.location).into()
-                });
+                },ts);
                 eprintln!("KeyUp: {:?}",e);
-                handled = s.send_event(window_id,e);
+                handled = s.send_legacy_root_event(window_id,e);
             }
             BaseEvent::Wheel(m) => {
-                let e: EEvent<E> = GEvent::from(RootEvent::MouseScroll{
+                let e: EEvent<E> = StdVariant::new(RootEvent::MouseScroll{
                     x: m.wheel_delta.x as i32,
                     y: m.wheel_delta.y as i32,
-                });
+                },ts);
                 eprintln!("Wheel: {:?}",e);
-                handled |= s.send_event(window_id,e);
+                handled |= s.send_legacy_root_event(window_id,e); //TODO event didn't have bounds filter, but maybe it needs?
             }
             BaseEvent::Zoom(_) => {
                 //handled = todo!();
             }
             BaseEvent::MouseMove(m) => {
-                let e: EEvent<E> = GEvent::from(RootEvent::MouseMove{
-                    pos: kpoint2offset(m.pos)
-                });
+                let pos = kpoint2offset(m.pos);
+                let e: EEvent<E> = StdVariant::new(RootEvent::MouseMove{
+                    pos
+                },ts).with_filter_point(pos); // TODO StdHandler currently doesn't keep the filter
                 eprintln!("MouseMove: {:?}",e);
-                handled |= s.send_event(window_id,e);
+                handled |= s.send_legacy_root_event(window_id,e);
             }
             BaseEvent::MouseDown(m) => {
-                let e: EEvent<E> = GEvent::from(RootEvent::MouseDown{
+                let e: EEvent<E> = StdVariant::new(RootEvent::MouseDown{
                     key: Key::Mouse(m.button).into()
-                });
+                },ts);
                 eprintln!("MouseDown: {:?}",e);
-                handled |= s.send_event(window_id,e);
+                handled |= s.send_legacy_root_event(window_id,e); //TODO technically it had pos! in old guion, but StdHandler currently doesn't keep the filter. Maybe change this
             }
             BaseEvent::MouseUp(m) => {
-                let e: EEvent<E> = GEvent::from(RootEvent::MouseUp{
+                let e: EEvent<E> = StdVariant::new(RootEvent::MouseUp{
                     key: Key::Mouse(m.button).into()
-                });
+                },ts);
                 eprintln!("MouseUp: {:?}",e);
-                handled |= s.send_event(window_id,e);
+                handled |= s.send_legacy_root_event(window_id,e); //TODO technically it had pos! in old guion, but StdHandler currently doesn't keep the filter. Maybe change this
             }
             BaseEvent::MouseLeave => {
-                let e: EEvent<E> = GEvent::from(RootEvent::MouseLeaveWindow{});
-                handled |= s.send_event(window_id,e);
+                let e: EEvent<E> = StdVariant::new(RootEvent::MouseLeaveWindow{},ts);
+                handled |= s.send_legacy_root_event(window_id,e);
             }
             BaseEvent::Timer(_) => {
                 //handled = todo!();
@@ -173,22 +176,42 @@ impl<E> App<E> where
     for<'a> ECQueue<'a,E>: AsRefMut<crate::ctx::queue::Queue<E>>,
     EEvent<E>: StdVarSup<E>,
     EEKey<E>: From<Key>,
-    EEFilter<E>: From<StdFilter<E>>,
 {
-    fn send_event(&mut self, window_id: usize, e: EEvent<E>) -> bool {
-        let e = EventCompound{
-            event: e,
-            bounds: Bounds::default(),
-            ts: 0, //TODO ts
-            filter: StdFilter{
-                filter_path: self.windows.path_of_window(window_id,&mut self.ctx),
-                filter_bounds: true,
-            }.into(),
-            style: Default::default(),
-            flag: true,
+    // fn send_event(&mut self, window_id: usize, e: EEvent<E>) -> bool {
+    //     let e = EventCompound{
+    //         event: e,
+    //         bounds: Bounds::default(),
+    //         ts: 0, //TODO ts
+    //         filter: StdFilter{
+    //             filter_path: self.windows.path_of_window(window_id,&mut self.ctx),
+    //             filter_bounds: true,
+    //         }.into(),
+    //         style: Default::default(),
+    //         flag: true,
+    //     };
+    //     let mut link = self.ctx.link(self.windows.resolved());
+    //     link._event_root(&e)
+    // }
+
+    fn send_legacy_root_event<V>(&mut self, window_id: usize, e: StdVariant<V,E>) -> bool where V: Variant<E> {
+        // TODO where do we inject inital window bounds?
+        let props = WithCurrentWidget{
+            inner: &(),
+            path: WidgetPath::empty(),
+            id: self.windows._id,
         };
-        let mut link = self.ctx.link(self.windows.resolved());
-        link._event_root(&e)
+
+        let e = e.with_filter_path(self.windows.path_of_window(window_id,&mut self.ctx));
+
+        let ghandler = self.ctx.build_handler();
+
+        ghandler._event_root(
+            &self.windows,
+            &props,
+            &e,
+            &self.windows,
+            &mut self.ctx,
+        )
     }
 }
 
