@@ -3,7 +3,6 @@ use druid_shell::{WinHandler, WindowHandle};
 use guion::aliases::*;
 use guion::backend::Backend;
 use guion::env::Env;
-use guion::event::filter::StdFilter;
 use guion::event::imp::StdVarSup;
 use guion::render::widgets::RenderStdWidgets;
 use guion::util::AsRefMut;
@@ -26,7 +25,6 @@ impl<E> WinHandler for WHandle<E> where
     //for<'a> ECQueue<'a,E>: AsRefMut<crate::ctx::queue::Queue<E>>,
     EEvent<E>: StdVarSup<E>,
     EEKey<E>: From<crate::event::key::Key>,
-    EEFilter<E>: From<StdFilter<E>>,
     for<'a> E::Backend: Backend<E,Renderer<'a>=Render<'a,E>>,
     //for<'a> ERenderer<'a,E>: RenderStdWidgets<E>,
     for<'a> Render<'a,E>: RenderStdWidgets<E>,
@@ -38,14 +36,16 @@ impl<E> WinHandler for WHandle<E> where
     }
 
     fn prepare_paint(&mut self) {
-        self.app.do_event(self.self_id, BaseEvent::PreRender);
+        let ts = now_time_stamp();
+        self.app.do_event(self.self_id, BaseEvent::PreRender, ts);
         self.app.render_pre(self.self_id);
     }
 
     fn paint(&mut self, piet: &mut druid_shell::piet::Piet, invalid: &druid_shell::Region) {
+        let ts = now_time_stamp();
         self.app.render(self.self_id, piet, invalid);
         self.app.render_post(self.self_id);
-        self.app.do_event(self.self_id, BaseEvent::PostRender);
+        self.app.do_event(self.self_id, BaseEvent::PostRender, ts);
     }
 
     fn as_any(&mut self) -> &mut dyn std::any::Any {
@@ -53,11 +53,13 @@ impl<E> WinHandler for WHandle<E> where
     }
 
     fn size(&mut self, size: druid_shell::kurbo::Size) {
-        self.app.do_event(self.self_id, BaseEvent::Size(size));
+        let ts = now_time_stamp();
+        self.app.do_event(self.self_id, BaseEvent::Size(size), ts);
     } // app::do_event and invalidate
 
     fn scale(&mut self, scale: druid_shell::Scale) {
-        self.app.do_event(self.self_id, BaseEvent::Scale(scale));
+        let ts = now_time_stamp();
+        self.app.do_event(self.self_id, BaseEvent::Scale(scale), ts);
     }
 
     fn rebuild_resources(&mut self) {
@@ -69,70 +71,91 @@ impl<E> WinHandler for WHandle<E> where
     }
 
     fn save_as(&mut self, token: druid_shell::FileDialogToken, file: Option<druid_shell::FileInfo>) {
-        self.app.do_event(self.self_id, BaseEvent::SaveAs{token,file});
+        let ts = now_time_stamp();
+        self.app.do_event(self.self_id, BaseEvent::SaveAs{token,file}, ts);
     }
 
     fn open_file(&mut self, token: druid_shell::FileDialogToken, file: Option<druid_shell::FileInfo>) {
-        self.app.do_event(self.self_id, BaseEvent::OpenFile{token,file});
+        let ts = now_time_stamp();
+        self.app.do_event(self.self_id, BaseEvent::OpenFile{token,file}, ts);
     }
 
     fn key_down(&mut self, event: druid_shell::KeyEvent) -> bool {
-        self.app.do_event(self.self_id, BaseEvent::KeyDown(event))
+        let ts = now_time_stamp();
+        self.app.do_event(self.self_id, BaseEvent::KeyDown(event), ts)
     }
 
     fn key_up(&mut self, event: druid_shell::KeyEvent) {
-        self.app.do_event(self.self_id, BaseEvent::KeyUp(event));
+        let ts = now_time_stamp();
+        self.app.do_event(self.self_id, BaseEvent::KeyUp(event), ts);
     }
 
     fn wheel(&mut self, event: &druid_shell::MouseEvent) {
-        self.app.do_event(self.self_id, BaseEvent::Wheel(event));
+        let ts = now_time_stamp();
+        self.app.do_event(self.self_id, BaseEvent::Wheel(event), ts);
     }
 
     fn zoom(&mut self, delta: f64) {
-        self.app.do_event(self.self_id, BaseEvent::Zoom(delta));
+        let ts = now_time_stamp();
+        self.app.do_event(self.self_id, BaseEvent::Zoom(delta), ts);
     }
 
     fn mouse_move(&mut self, event: &druid_shell::MouseEvent) {
-        self.app.do_event(self.self_id, BaseEvent::MouseMove(event));
+        let ts = now_time_stamp();
+        self.app.do_event(self.self_id, BaseEvent::MouseMove(event), ts);
     } // TODO is there a stupid fn to q u e r y mouse pos? or do we have to calc from the event?
 
     fn mouse_down(&mut self, event: &druid_shell::MouseEvent) {
-        self.app.do_event(self.self_id, BaseEvent::MouseDown(event));
+        let ts = now_time_stamp();
+        self.app.do_event(self.self_id, BaseEvent::MouseDown(event), ts);
     }
 
     fn mouse_up(&mut self, event: &druid_shell::MouseEvent) {
-        self.app.do_event(self.self_id, BaseEvent::MouseUp(event));
+        let ts = now_time_stamp();
+        self.app.do_event(self.self_id, BaseEvent::MouseUp(event), ts);
     }
 
     fn mouse_leave(&mut self) {
-        self.app.do_event(self.self_id, BaseEvent::MouseLeave);
+        let ts = now_time_stamp();
+        self.app.do_event(self.self_id, BaseEvent::MouseLeave, ts);
     }
 
     fn timer(&mut self, token: druid_shell::TimerToken) {
-        self.app.do_event(self.self_id, BaseEvent::Timer(token));
+        let ts = now_time_stamp();
+        self.app.do_event(self.self_id, BaseEvent::Timer(token), ts);
     }
 
     fn got_focus(&mut self) {
-        self.app.do_event(self.self_id, BaseEvent::GotFocus);
+        let ts = now_time_stamp();
+        self.app.do_event(self.self_id, BaseEvent::GotFocus, ts);
     }
 
     fn lost_focus(&mut self) {
-        self.app.do_event(self.self_id, BaseEvent::LostFocus);
+        let ts = now_time_stamp();
+        self.app.do_event(self.self_id, BaseEvent::LostFocus, ts);
     }
 
     fn request_close(&mut self) {
-        if !self.app.do_event(self.self_id, BaseEvent::RequestClose) {
+        let ts = now_time_stamp();
+        if !self.app.do_event(self.self_id, BaseEvent::RequestClose, ts) {
             self.handle.close();
         }
     }
 
     fn destroy(&mut self) {
-        if !self.app.do_event(self.self_id, BaseEvent::Destroy) {
+        let ts = now_time_stamp();
+        if !self.app.do_event(self.self_id, BaseEvent::Destroy, ts) {
             self.app.inner.lock().unwrap().ds_app.quit();
         }
     }
 
     fn idle(&mut self, token: druid_shell::IdleToken) {
-        self.app.do_event(self.self_id, BaseEvent::Idle(token));
+        let ts = now_time_stamp();
+        self.app.do_event(self.self_id, BaseEvent::Idle(token), ts);
     }
+}
+
+fn now_time_stamp() -> u64 {
+    //TODO new time stamp format and retrieve method
+    std::time::SystemTime::now().duration_since(std::time::SystemTime::UNIX_EPOCH).unwrap().as_millis() as u64
 }

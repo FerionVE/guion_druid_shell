@@ -6,7 +6,6 @@ use guion::aliases::*;
 use guion::backend::Backend;
 use guion::env::Env;
 use guion::error::ResolveResult;
-use guion::event::filter::StdFilter;
 use guion::event::imp::StdVarSup;
 use guion::id::WidgetIDAlloc;
 use guion::render::widgets::RenderStdWidgets;
@@ -18,7 +17,7 @@ use crate::ctx::state::DSState;
 use crate::render::Render;
 use crate::style::cursor::IntoGuionDruidShellCursor;
 
-use self::window::{Window, WindowState, AWindowState};
+use self::window::{Window, ViewDyn3};
 use self::window::handle::WHandle;
 use self::windows::Windows;
 
@@ -65,7 +64,6 @@ impl<E> ArcApp<E> where
     for<'a> ECQueue<'a,E>: AsRefMut<crate::ctx::queue::Queue<E>>,
     EEvent<E>: StdVarSup<E>,
     EEKey<E>: From<crate::event::key::Key>,
-    EEFilter<E>: From<StdFilter<E>>,
     for<'a> E::Backend: Backend<E,Renderer<'a>=Render<'a,E>>,
     //for<'a> ERenderer<'a,E>: AsRefMut<Render<'a,E>> + RenderStdWidgets<E>,
     for<'a> Render<'a,E>: RenderStdWidgets<E>,
@@ -75,7 +73,7 @@ impl<E> ArcApp<E> where
     pub fn add_window<W,M>(&self, f: M, widget: W) where
         W: 'static,
         M: FnOnce(&mut WindowBuilder),
-        for<'a> &'a W: View<E,&'static (dyn for<'r> Fn(E::RootMut<'r>,&'r (),&mut E::Context<'_>)->ResolveResult<&'r mut W> + Send + Sync + 'static)>,
+        W: ViewDyn3<E>,
     {
         let app;
         let next_id;
@@ -85,7 +83,7 @@ impl<E> ArcApp<E> where
             next_id = s.windows.windows.len();
             s.windows.windows.push(Window{
                 handle: None,
-                widget: AWindowState::<E,W>::new(widget,move |h,_| &mut *h.windows[next_id].widget ),
+                widget: Box::new(widget),
                 dims: Default::default()
             });
         }

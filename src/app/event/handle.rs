@@ -60,10 +60,10 @@ impl<E> ArcApp<E> where
         let mut handled= false;
         match event {
             BaseEvent::Size(size) => {
-                let e: EEvent<E> = GEvent::from(RootEvent::WindowResize{
+                let e = StdVariant::new(RootEvent::WindowResize{
                     size: ksize2dims(size),
-                });
-                handled |= s.send_event(window_id,e);
+                },ts);
+                handled |= s.send_legacy_root_event(window_id,e);
             }
             BaseEvent::Scale(_) => {
                 //handled = todo!();
@@ -100,7 +100,7 @@ impl<E> ArcApp<E> where
                 handled = s.send_legacy_root_event(window_id,e);
             }
             BaseEvent::Wheel(m) => {
-                let e: EEvent<E> = StdVariant::new(RootEvent::MouseScroll{
+                let e = StdVariant::new(RootEvent::MouseScroll{
                     x: m.wheel_delta.x as i32,
                     y: m.wheel_delta.y as i32,
                 },ts);
@@ -112,28 +112,28 @@ impl<E> ArcApp<E> where
             }
             BaseEvent::MouseMove(m) => {
                 let pos = kpoint2offset(m.pos);
-                let e: EEvent<E> = StdVariant::new(RootEvent::MouseMove{
+                let e = StdVariant::new(RootEvent::MouseMove{
                     pos
                 },ts).with_filter_point(pos); // TODO StdHandler currently doesn't keep the filter
                 eprintln!("MouseMove: {:?}",e);
                 handled |= s.send_legacy_root_event(window_id,e);
             }
             BaseEvent::MouseDown(m) => {
-                let e: EEvent<E> = StdVariant::new(RootEvent::MouseDown{
+                let e = StdVariant::new(RootEvent::MouseDown{
                     key: Key::Mouse(m.button).into()
                 },ts);
                 eprintln!("MouseDown: {:?}",e);
                 handled |= s.send_legacy_root_event(window_id,e); //TODO technically it had pos! in old guion, but StdHandler currently doesn't keep the filter. Maybe change this
             }
             BaseEvent::MouseUp(m) => {
-                let e: EEvent<E> = StdVariant::new(RootEvent::MouseUp{
+                let e = StdVariant::new(RootEvent::MouseUp{
                     key: Key::Mouse(m.button).into()
                 },ts);
                 eprintln!("MouseUp: {:?}",e);
                 handled |= s.send_legacy_root_event(window_id,e); //TODO technically it had pos! in old guion, but StdHandler currently doesn't keep the filter. Maybe change this
             }
             BaseEvent::MouseLeave => {
-                let e: EEvent<E> = StdVariant::new(RootEvent::MouseLeaveWindow{},ts);
+                let e = StdVariant::new(RootEvent::MouseLeaveWindow{},ts);
                 handled |= s.send_legacy_root_event(window_id,e);
             }
             BaseEvent::Timer(_) => {
@@ -193,7 +193,7 @@ impl<E> App<E> where
     //     link._event_root(&e)
     // }
 
-    fn send_legacy_root_event<V>(&mut self, window_id: usize, e: StdVariant<V,E>) -> bool where V: Variant<E> {
+    fn send_legacy_root_event<V>(&mut self, window_id: usize, e: StdVariant<V,E>) -> bool where V: Variant<E> + Clone {
         // TODO where do we inject inital window bounds?
         let props = WithCurrentWidget{
             inner: &(),

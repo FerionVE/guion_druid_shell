@@ -1,7 +1,6 @@
 use druid_shell::piet::Piet;
 use guion::backend::Backend;
 use guion::env::Env;
-use guion::event::filter::StdFilter;
 use guion::event::standard::dyn_evt::DynEvent;
 use guion::id::standard::StdID;
 use guion::layout::StdGonstraints;
@@ -41,7 +40,6 @@ impl Env for ExampleEnv {
 impl Backend<ExampleEnv> for ExampleBackend {
     type Renderer<'a> = Render<'a,ExampleEnv>;
     type Event = DynEvent<ExampleEnv,Key,ExampleDest>; //TODO ditch Consuming
-    type EventFilter = StdFilter<ExampleEnv>;
     type Style = Style;
     type Size = StdGonstraints;
     type TextLayout = Glyphs;
