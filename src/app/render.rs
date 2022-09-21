@@ -2,16 +2,19 @@ use druid_shell::piet::{Piet, CairoTextLayout};
 use guion::aliases::{ECQueue, ERenderer, ESCursor, ETextLayout};
 use guion::backend::Backend;
 use guion::env::Env;
-use guion::render::Render as _;
+use guion::render::{Render as _, WithTestStyle, TestStyleColorType};
 use guion::render::widgets::RenderStdWidgets;
 use guion::style::selectag::standard::StdSelectag;
 use guion::style::standard::cursor::StdCursor;
 use guion::util::AsRefMut;
 use guion::ctx::Context;
 use guion::root::RootRef;
+use guion::widget::Widget;
+use guion::widget::dyn_tunnel::WidgetDyn;
 
 use crate::render::Render;
 use crate::style::cursor::IntoGuionDruidShellCursor;
+use crate::style::{stupid_test_style_variants, stupid_test_style};
 
 use super::{ArcApp, ksize2dims};
 use super::windows::Windows;
@@ -46,20 +49,29 @@ for<'a,'b> E: Env<RootRef<'a>=&'a Windows<E>,RootMut<'b>=&'b mut Windows<E>>,
             (dims.width as u32, dims.height as u32),
         );
 
+        let test_style = stupid_test_style_variants();
+        let test_style = stupid_test_style(&test_style);
+        let props = WithTestStyle((),test_style);
+
         //TODO reset cursor
         //TODO restore renderer
         render.pre();
 
         //fill background
-        render.with(StdSelectag::ObjBackground)
-            .fill_rect(&mut s.ctx);
+        render.fill_rect(&(TestStyleColorType::Bg + &props), &mut s.ctx);
+
         //process queued and render
         render.force |= s.ctx.queue().as_ref().force_render;
 
         let root: E::RootRef<'_> = &s.windows;
-        let w = root.widget(path,&mut s.ctx).expect("Lost Widget in render");
-        let w = s.ctx.link(w);
-        render.render_widget(w);
+        root.with_resolve(
+            path,
+            #[inline] |widget, ctx| {
+                let widget = widget.expect("Lost Widget in render");
+                widget.render(&props, &mut render, root, ctx);
+            },
+            root, &mut s.ctx
+        );
 
         s.ctx.queue_mut().as_mut().force_render = false;
 

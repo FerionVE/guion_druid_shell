@@ -132,7 +132,7 @@ impl<E> Widget<E> for Windows<E> where for<'a,'b> E: Env<RootRef<'a>=&'a Self,Ro
         let mut passed = false;
 
         for i in 0..self.childs() {
-            self.windows[i].view(|child: &dyn WidgetDyn<E>,root,ctx| {
+            self.windows[i].view(|child,root,ctx| {
                 let stack = WithCurrentBounds {
                     inner: WithCurrentWidget {
                         inner: stack,
@@ -173,7 +173,7 @@ impl<E> Widget<E> for Windows<E> where for<'a,'b> E: Env<RootRef<'a>=&'a Self,Ro
     where
         F: for<'w,'ww,'c,'cc> FnOnce(Result<&'w (dyn WidgetDyn<E>+'ww),()>,&'c mut E::Context<'cc>) -> R
     {
-        self.windows[i].view(|child: &dyn WidgetDyn<E>,root,ctx| {
+        self.windows[i].view(|child,root,ctx| {
             (callback)(Ok(child),ctx)
         },i,root,ctx)
     }

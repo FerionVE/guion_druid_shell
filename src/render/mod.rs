@@ -15,10 +15,10 @@ pub struct Render<'s,E> where E: Env {
     piet: PietRef<'s>,
     window_handle: &'s mut WindowHandle,
     pub next_cursor: &'s mut Option<ESCursor<E>>,
-    pub bounds: Bounds,
-    pub viewport: Bounds,
-    pub style: EStyle<E>,
-    pub selector: ESSelector<E>,
+    //pub bounds: Bounds,
+    //pub viewport: Bounds,
+    //pub style: EStyle<E>,
+    //pub selector: ESSelector<E>,
     pub force: bool,
 }
 
@@ -26,10 +26,10 @@ impl<'s,E> Render<'s,E> where E: Env, ESCursor<E>: IntoGuionDruidShellCursor<E> 
     pub fn new<'b>(window_handle: &'s mut WindowHandle, piet: &'s mut Piet<'b>, next_cursor: &'s mut Option<ESCursor<E>>, dim: (u32,u32)) -> Self where 'b: 's {
         Self {
             piet: PietRef::new(piet),
-            bounds: Bounds::from_xywh(0,0,dim.0,dim.1),
-            viewport: Bounds::from_xywh(0,0,dim.0,dim.1),
-            style: Default::default(),
-            selector: Default::default(),
+            // bounds: Bounds::from_xywh(0,0,dim.0,dim.1),
+            // viewport: Bounds::from_xywh(0,0,dim.0,dim.1),
+            // style: Default::default(),
+            // selector: Default::default(),
             next_cursor,
             force: false,
             window_handle,
@@ -54,10 +54,10 @@ impl<'s,E> Render<'s,E> where E: Env, ESCursor<E>: IntoGuionDruidShellCursor<E> 
         Render {
             piet: self.piet.fork(),
             window_handle: self.window_handle,
-            bounds: self.bounds.clone(),
-            viewport: self.viewport.clone(),
-            style: self.style.clone(),
-            selector: self.selector.clone(),
+            // bounds: self.bounds.clone(),
+            // viewport: self.viewport.clone(),
+            // style: self.style.clone(),
+            // selector: self.selector.clone(),
             next_cursor: self.next_cursor,
             force: self.force,
         }

@@ -2,7 +2,12 @@ use crate::ctx::state::DSState;
 use crate::style::color::Color;
 use crate::style::font::Font;
 use crate::style::font::Glyphs;
+use guion::aliases::ESColor;
 use guion::env::Env;
+use guion::render::TestStyle;
+use guion::render::TestStyleType;
+use guion::render::TestStyleVariant;
+use guion::render::WithTestStyle;
 use guion::style::color::Color as GColor;
 use guion::style::standard::cursor::StdCursor;
 use guion::util::AsRefMut;
@@ -89,5 +94,48 @@ pub fn stupid_colors<E>(v: SelectorFilled<E>) -> [u8;4] where E: Env {
         SelectorFilled{obj: Obj::Background,..} => [32,32,32,255],
         SelectorFilled{obj: Obj::Default,..} => [32,32,32,255],
         _ => [127,0,0,255],
+    }
+}
+
+pub fn stupid_test_style_variants<E>() -> [TestStyleVariant<E>;5] where E: Env {
+    [
+        TestStyleVariant {
+            fg_color: ESColor::<E>::from_rgba8([64,64,64,255]),
+            border_color: ESColor::<E>::from_rgba8([0,255,0,255]),
+        },
+        TestStyleVariant {
+            fg_color: ESColor::<E>::from_rgba8([64,128,64,255]),
+            border_color: ESColor::<E>::from_rgba8([0,255,0,255]),
+        },
+        TestStyleVariant {
+            fg_color: ESColor::<E>::from_rgba8([64,128,64,255]),
+            border_color: ESColor::<E>::from_rgba8([255,127,0,255]),
+        },
+        TestStyleVariant {
+            fg_color: ESColor::<E>::from_rgba8([0,192,0,255]),
+            border_color: ESColor::<E>::from_rgba8([0,0,0,255]),
+        },
+        TestStyleVariant {
+            fg_color: ESColor::<E>::from_rgba8([64,64,64,255]),
+            border_color: ESColor::<E>::from_rgba8([128,128,128,255]),
+        }
+    ]
+}
+
+pub fn stupid_test_style<'a,E>(variants: &'a [TestStyleVariant<E>;5]) -> TestStyle<'a,E> where E: Env {
+    TestStyle {
+        default_variant: &variants[0],
+        hovered_variant: &variants[1],
+        selected_variant: &variants[2],
+        activated_variant: &variants[3],
+        disabled_variant: &variants[4],
+        variant: TestStyleType::Default,
+        bg_color: ESColor::<E>::from_rgba8([32,32,32,255]),
+        text_color: ESColor::<E>::from_rgba8([255,255,255,255]),
+        component_border: Border::uniform(1),
+        spacing: Border::uniform(2),
+        cursor: StdCursor::Default.into(),
+        current_color: guion::render::TestStyleColorType::Bg,
+        current_border: guion::render::TestStyleBorderType::Spacing,
     }
 }

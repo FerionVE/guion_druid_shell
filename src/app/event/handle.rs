@@ -198,7 +198,7 @@ impl<E> App<E> where
         let props = WithCurrentWidget{
             inner: &(),
             path: WidgetPath::empty(),
-            id: self.windows._id,
+            id: self.windows._id.clone(),
         };
 
         let e = e.with_filter_path(self.windows.path_of_window(window_id,&mut self.ctx));
