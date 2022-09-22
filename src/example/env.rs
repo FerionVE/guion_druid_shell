@@ -20,9 +20,9 @@ use crate::style::font::Glyphs;
 use super::ctx::ExampleCtx;
 use super::valid::ExampleValidState;
 
-#[derive(Clone,PartialEq,Default)]
+#[derive(Clone,PartialEq,Default,Copy)]
 pub struct ExampleEnv;
-#[derive(Clone,PartialEq,Default)]
+#[derive(Clone,PartialEq,Default,Copy)]
 pub struct ExampleBackend;
 
 impl Env for ExampleEnv {
@@ -35,6 +35,7 @@ impl Env for ExampleEnv {
     type ValidState = ExampleValidState;
     type Message = Box<dyn Any>;
     type Error = GuionError<ExampleEnv>;
+    type Phantom = std::convert::Infallible;
 }
 
 impl Backend<ExampleEnv> for ExampleBackend {

@@ -129,13 +129,13 @@ pub fn stupid_test_style<'a,E>(variants: &'a [TestStyleVariant<E>;5]) -> TestSty
         selected_variant: &variants[2],
         activated_variant: &variants[3],
         disabled_variant: &variants[4],
-        variant: TestStyleType::Default,
+        variant_type: TestStyleType::Default,
         bg_color: ESColor::<E>::from_rgba8([32,32,32,255]),
         text_color: ESColor::<E>::from_rgba8([255,255,255,255]),
         component_border: Border::uniform(1),
         spacing: Border::uniform(2),
         cursor: StdCursor::Default.into(),
-        current_color: guion::render::TestStyleColorType::Bg,
-        current_border: guion::render::TestStyleBorderType::Spacing,
+        color_type: guion::render::TestStyleColorType::Bg,
+        border_type: guion::render::TestStyleBorderType::Spacing,
     }
 }

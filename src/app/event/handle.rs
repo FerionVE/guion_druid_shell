@@ -8,6 +8,7 @@ use guion::event::variant::Variant;
 use guion::event_new::variants::StdVariant;
 use guion::handler::Handler;
 use guion::path::WidgetPath;
+use guion::render::WithTestStyle;
 use guion::util::AsRefMut;
 use guion::event::Event as GEvent;
 use guion::event::standard::variants::RootEvent;
@@ -18,6 +19,7 @@ use crate::app::{App, ArcApp};
 use crate::app::windows::Windows;
 use crate::event::key::Key;
 use crate::style::font::ksize2dims;
+use crate::style::{stupid_test_style_variants, stupid_test_style};
 
 use super::BaseEvent;
 
@@ -194,9 +196,13 @@ impl<E> App<E> where
     // }
 
     fn send_legacy_root_event<V>(&mut self, window_id: usize, e: StdVariant<V,E>) -> bool where V: Variant<E> + Clone {
+        let test_style = stupid_test_style_variants::<E>();
+        let test_style = stupid_test_style(&test_style);
+        let props = WithTestStyle((),test_style);
+        
         // TODO where do we inject inital window bounds?
         let props = WithCurrentWidget{
-            inner: &(),
+            inner: props,
             path: WidgetPath::empty(),
             id: self.windows._id.clone(),
         };

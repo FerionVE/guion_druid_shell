@@ -179,7 +179,7 @@ impl<E> Widget<E> for Windows<E> where for<'a,'b> E: Env<RootRef<'a>=&'a Self,Ro
     }
 
     //TODO Widget::child_bounds isn't a thing in the new render/layout/caching concept
-    fn child_bounds<P>(&self, stack: &P, b: &Bounds, e: &EStyle<E>, force: bool) -> Result<Vec<Bounds>,()> where P: Queron<E> + ?Sized {
+    fn child_bounds<P>(&self, stack: &P, b: &Bounds, force: bool, root: E::RootRef<'_>, ctx: &mut E::Context<'_>) -> Result<Vec<Bounds>,()> where P: Queron<E> + ?Sized {
         Ok(self.windows.iter()
             .map(|r| Bounds::from_size(todo!()) )
             .collect::<Vec<_>>())

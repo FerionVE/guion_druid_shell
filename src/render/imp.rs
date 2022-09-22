@@ -140,7 +140,7 @@ impl<'r,E> RenderStdWidgets<E> for Render<'r,E> where
     //for<'a> ERenderer<'a,E>: RenderStdWidgets<E>+'a,
     for<'a> E::Backend: Backend<E,Renderer<'a>=Render<'a,E>>,
 {
-    fn fill_rect<Q>(&mut self, props: &Q, c: &mut E::Context<'_>) where Q: Queron<E> {
+    fn fill_rect<Q>(&mut self, props: &Q, c: &mut E::Context<'_>) where Q: Queron<E> + ?Sized {
         let bounds = QueryCurrentBounds.query_in(props).unwrap();
         let style = QueryTestStyleCurrent.query_in(props).unwrap();
 
@@ -152,7 +152,7 @@ impl<'r,E> RenderStdWidgets<E> for Render<'r,E> where
         r.fill(rect,&brush); //TODO clip to viewport
     }
 
-    fn fill_border_inner<Q>(&mut self, props: &Q, c: &mut E::Context<'_>) where Q: Queron<E> {
+    fn fill_border_inner<Q>(&mut self, props: &Q, c: &mut E::Context<'_>) where Q: Queron<E> + ?Sized {
         let bounds = QueryCurrentBounds.query_in(props).unwrap();
         let style = QueryTestStyleCurrent.query_in(props).unwrap();
 
@@ -183,7 +183,7 @@ impl<'r,E> RenderStdWidgets<E> for Render<'r,E> where
         }
     }*/
 
-    fn render_preprocessed_text<Q>(&mut self, text: &ETextLayout<E>, inner_offset: guion::util::bounds::Offset, props: &Q, c: &mut E::Context<'_>) where Q: Queron<E> {
+    fn render_preprocessed_text<Q>(&mut self, text: &ETextLayout<E>, inner_offset: guion::util::bounds::Offset, props: &Q, c: &mut E::Context<'_>) where Q: Queron<E> + ?Sized {
         let bounds = QueryCurrentBounds.query_in(props).unwrap();
         let style = QueryTestStyleCurrent.query_in(props).unwrap();
 

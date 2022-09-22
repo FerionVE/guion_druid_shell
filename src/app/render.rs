@@ -11,6 +11,7 @@ use guion::ctx::Context;
 use guion::root::RootRef;
 use guion::widget::Widget;
 use guion::widget::dyn_tunnel::WidgetDyn;
+use guion::widget::stack::WithCurrentBounds;
 
 use crate::render::Render;
 use crate::style::cursor::IntoGuionDruidShellCursor;
@@ -52,6 +53,11 @@ for<'a,'b> E: Env<RootRef<'a>=&'a Windows<E>,RootMut<'b>=&'b mut Windows<E>>,
         let test_style = stupid_test_style_variants();
         let test_style = stupid_test_style(&test_style);
         let props = WithTestStyle((),test_style);
+        let props = WithCurrentBounds {
+            inner: props,
+            bounds: guion::util::bounds::Bounds::from_xywh(0,0,dims.width as u32,dims.height as u32),
+            viewport: guion::util::bounds::Bounds::from_xywh(0,0,dims.width as u32,dims.height as u32),
+        };
 
         //TODO reset cursor
         //TODO restore renderer
