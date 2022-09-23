@@ -11,7 +11,7 @@ use guion::ctx::Context;
 use guion::root::RootRef;
 use guion::widget::Widget;
 use guion::widget::dyn_tunnel::WidgetDyn;
-use guion::widget::stack::WithCurrentBounds;
+use guion::widget::stack::{WithCurrentBounds, WithCurrentWidget};
 
 use crate::render::Render;
 use crate::style::cursor::IntoGuionDruidShellCursor;
@@ -71,9 +71,16 @@ for<'a,'b> E: Env<RootRef<'a>=&'a Windows<E>,RootMut<'b>=&'b mut Windows<E>>,
 
         let root: E::RootRef<'_> = &s.windows;
         root.with_resolve(
-            path,
+            path.clone(),
             #[inline] |widget, ctx| {
                 let widget = widget.expect("Lost Widget in render");
+
+                let props = WithCurrentWidget{
+                    inner: props,
+                    path: path,
+                    id: widget.id(),
+                };
+
                 widget.render(&props, &mut render, root, ctx);
             },
             root, &mut s.ctx
