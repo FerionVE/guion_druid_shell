@@ -95,6 +95,12 @@ impl Cusror {
 }
 
 impl<E> TxtCurSel<E> for Cusror {
+    type Cachor = (u32,u32);
+
+    fn cachor(&self) -> Self::Cachor {
+        (self.caret,self.select)
+    }
+
     fn typ(&self) -> TxtCurSelBytePos {
         if self.caret == self.select {
             TxtCurSelBytePos::Cursor(self.caret as usize)

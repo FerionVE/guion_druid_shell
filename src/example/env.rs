@@ -17,6 +17,7 @@ use crate::render::Render;
 use crate::style::Style;
 use crate::style::font::Glyphs;
 
+use super::StupidEventDowncastMap;
 use super::ctx::ExampleCtx;
 use super::valid::ExampleValidState;
 
@@ -36,6 +37,7 @@ impl Env for ExampleEnv {
     type Message = Box<dyn Any>;
     type Error = GuionError<ExampleEnv>;
     type Phantom = std::convert::Infallible;
+    type EventDowncastMap = /*();*/StupidEventDowncastMap;
 }
 
 impl Backend<ExampleEnv> for ExampleBackend {

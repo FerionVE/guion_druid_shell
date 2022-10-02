@@ -176,6 +176,8 @@ impl<E> Widget<E> for Windows<E> where for<'a,'b> E: Env<RootRef<'a>=&'a Self,Ro
                     viewport: Bounds::from_size(self.windows[i].dims),
                 };
 
+                cache.cache[i].reset_current();
+
                 passed |= child.event_direct(&stack,event,&mut cache.cache[i], root,ctx);
             },i,root,ctx)
         }

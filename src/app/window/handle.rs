@@ -63,7 +63,7 @@ impl<E> WinHandler for WHandle<E> where
     }
 
     fn rebuild_resources(&mut self) {
-        todo!()
+        self.app.inner.lock().unwrap().caches = Default::default();
     }
 
     fn command(&mut self, id: u32) {

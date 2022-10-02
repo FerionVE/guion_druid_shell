@@ -7,6 +7,7 @@ use guion::error::ResolveResult;
 use guion::view::View;
 use guion::widget::Widget;
 use guion::widget::as_widget::AsWidget;
+use guion::widget::cache::DynWidgetCache;
 use guion::widget::dyn_tunnel::WidgetDyn;
 use guion::widgets::button::Button;
 use guion::widgets::label::Label;
@@ -29,6 +30,7 @@ const_std_id!(RootE PaneID LabelID ButtonID ButtonLabelID);
 // Immutable immediate view, rendering and layouting done here
 impl<'z> View<'z,ExampleEnv> for Model {
     type Viewed<'v,MutorFn> = dyn WidgetDyn<ExampleEnv> + 'v where MutorFn: 'static, 'z: 'v;
+    type WidgetCache = DynWidgetCache<ExampleEnv>;
     type Mutable<'k> = Model;
 
     fn view<'d,MutorFn,DispatchFn,R>(&'d self, dispatch: DispatchFn, mutor: MutorFn, root: <ExampleEnv as Env>::RootRef<'_>, ctx: &mut <ExampleEnv as Env>::Context<'_>) -> R
@@ -60,7 +62,7 @@ fn main() {
 
     app.add_window::<Model,_>(
         |window| {
-            window.set_title("7gui1")
+            window.set_title("7gui 01 Counter")
         },
         Model{count:0},
     );

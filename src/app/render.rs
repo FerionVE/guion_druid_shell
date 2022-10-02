@@ -10,6 +10,7 @@ use guion::util::AsRefMut;
 use guion::ctx::Context;
 use guion::root::RootRef;
 use guion::widget::Widget;
+use guion::widget::cache::WidgetCache;
 use guion::widget::dyn_tunnel::WidgetDyn;
 use guion::widget::stack::{WithCurrentBounds, WithCurrentWidget};
 
@@ -33,7 +34,7 @@ for<'a,'b> E: Env<RootRef<'a>=&'a Windows<E>,RootMut<'b>=&'b mut Windows<E>>,
     pub(crate) fn render_pre(&self, window_id: usize) {
         //todo!()
     }
-    pub(crate) fn render(&self, window_id: usize, render: &mut Piet, bounds: &druid_shell::Region) {
+    pub(crate) fn render(&self, window_id: usize, render: &mut Piet, invalid_region: &druid_shell::Region) {
         let mut s = self.inner.lock().unwrap();
         let s = &mut *s;
         let mut window_handle = s.windows.windows[window_id].handle.as_ref().unwrap().clone();
@@ -63,8 +64,7 @@ for<'a,'b> E: Env<RootRef<'a>=&'a Windows<E>,RootMut<'b>=&'b mut Windows<E>>,
         //TODO restore renderer
         render.pre();
 
-        //fill background
-        //TODO caching test
+        // visual caching debug
         render.fill_rect(&(TestStyleColorType::Custom(guion::style::color::Color::from_rgba8([0,0,0,10])) + &props), &mut s.ctx);
 
         //process queued and render
@@ -83,6 +83,8 @@ for<'a,'b> E: Env<RootRef<'a>=&'a Windows<E>,RootMut<'b>=&'b mut Windows<E>>,
                     path: path,
                     id: widget.id(),
                 };
+
+                s.caches.cache[idx].reset_current();
 
                 widget.render(&props, &mut render, force, &mut s.caches.cache[idx], root, ctx);
             },
