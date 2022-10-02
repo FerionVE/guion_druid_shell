@@ -12,6 +12,7 @@ use guion::render::widgets::RenderStdWidgets;
 use guion::util::AsRefMut;
 use guion::util::bounds::Dims;
 use guion::view::View;
+use guion::widget::cache::DynWidgetCache;
 
 use crate::ctx::state::DSState;
 use crate::render::Render;
@@ -19,7 +20,7 @@ use crate::style::cursor::IntoGuionDruidShellCursor;
 
 use self::window::{Window, ViewDyn3};
 use self::window::handle::WHandle;
-use self::windows::Windows;
+use self::windows::{Windows, GlobalCache};
 
 pub mod windows;
 pub mod window;
@@ -35,6 +36,7 @@ pub struct ArcApp<E> where E: Env {
 pub struct App<E> where E: Env {
     ds_app: druid_shell::Application,
     windows: windows::Windows<E>,
+    caches: GlobalCache<E>, //TODO assert sync with windows
     ctx: E::Context<'static>,
 }
 
@@ -46,7 +48,8 @@ impl<E> ArcApp<E> where E: Env, for<'a> E::Context<'a>: AsRefMut<DSState>, E::Wi
         let app = App {
             ds_app,
             windows,
-            ctx
+            ctx,
+            caches: GlobalCache { cache: Vec::new() },
         };
         ArcApp{inner: Arc::new(Mutex::new(app))}
     }
@@ -84,8 +87,9 @@ impl<E> ArcApp<E> where
             s.windows.windows.push(Window{
                 handle: None,
                 widget: Box::new(widget),
-                dims: Default::default()
+                dims: Default::default(),
             });
+            s.caches.cache.push(Default::default());
         }
 
         let handler = WHandle {

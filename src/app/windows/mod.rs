@@ -6,6 +6,7 @@ use guion::queron::Queron;
 use guion::root::{RootRef, RootMut};
 use guion::util::AsRefMut;
 use guion::util::bounds::Bounds;
+use guion::widget::cache::{DynWidgetCache, WidgetCache};
 use guion::widget::dyn_tunnel::WidgetDyn;
 use guion::widget::stack::{WithCurrentWidget, WithCurrentBounds};
 use guion::widget::{Widget};
@@ -23,6 +24,33 @@ impl<E> Windows<E> where for<'a,'b> E: Env<RootRef<'a>=&'a Windows<E>,RootMut<'b
     pub(crate) fn path_of_window(&self, window: usize, ctx: &mut E::Context<'_>) -> E::WidgetPath {
         //TODO isn't it stupid that we actually need to view it to get the path of the widget? It's time for a new path system
         self.windows[window].view(|w,_,_| w.in_parent_path(WidgetPath::empty()) ,window,self,ctx) //TODO empty default constructor for path
+    }
+
+    pub fn with_window_by_path<'s,'l:'s,F,R>(
+        &'s self,
+        i: E::WidgetPath,
+        callback: F,
+        ctx: &mut E::Context<'_>,
+    ) -> R
+    where 
+        F: for<'w,'ww,'c,'cc> FnOnce(Result<&'w (dyn WidgetDyn<E>+'ww),()>,usize,&'c mut E::Context<'cc>) -> R,
+        Self: 'l
+    {
+        for c in 0..self.childs() {
+            if let Some(r) = self.with_child(
+                c, 
+                #[inline] |w,_| w.unwrap().resolved_by_path(&i),
+                self.fork(), ctx,
+            ) {
+                return self.with_child(
+                    c,
+                    #[inline] |child,ctx| (callback)(child,c,ctx),
+                    self.fork(), ctx,
+                );
+            }
+        }
+
+        (callback)(Err(()),usize::MAX,ctx)
     }
 
     // pub fn resolved(&self) -> Resolved<E> {
@@ -105,6 +133,8 @@ impl<'g,E> RootMut<E> for &'g mut Windows<E> where for<'a,'b> E: Env<RootRef<'a>
 // }
 
 impl<E> Widget<E> for Windows<E> where for<'a,'b> E: Env<RootRef<'a>=&'a Self,RootMut<'b>=&'b mut Self> {
+    type Cache = GlobalCache<E>;
+
     fn id(&self) -> E::WidgetID {
         self._id.clone()
     }
@@ -112,7 +142,9 @@ impl<E> Widget<E> for Windows<E> where for<'a,'b> E: Env<RootRef<'a>=&'a Self,Ro
     fn _render<P>(
         &self,
         stack: &P,
-        r: &mut ERenderer<'_,E>,
+        renderer: &mut ERenderer<'_,E>,
+        force_render: bool,
+        cache: &mut Self::Cache,
         root: E::RootRef<'_>,
         ctx: &mut E::Context<'_>
     ) where P: Queron<E> + ?Sized {
@@ -122,7 +154,8 @@ impl<E> Widget<E> for Windows<E> where for<'a,'b> E: Env<RootRef<'a>=&'a Self,Ro
     fn _event_direct<P,Evt>(
         &self,
         stack: &P,
-        e: &Evt,
+        event: &Evt,
+        cache: &mut Self::Cache,
         root: E::RootRef<'_>,
         ctx: &mut E::Context<'_>
     ) -> guion::EventResp
@@ -143,7 +176,7 @@ impl<E> Widget<E> for Windows<E> where for<'a,'b> E: Env<RootRef<'a>=&'a Self,Ro
                     viewport: Bounds::from_size(self.windows[i].dims),
                 };
 
-                passed |= child.event_direct(&stack,e,root,ctx);
+                passed |= child.event_direct(&stack,event,&mut cache.cache[i], root,ctx);
             },i,root,ctx)
         }
         //eprintln!("e{}",passed);
@@ -153,6 +186,7 @@ impl<E> Widget<E> for Windows<E> where for<'a,'b> E: Env<RootRef<'a>=&'a Self,Ro
     fn _size<P>(
         &self,
         stack: &P,
+        cache: &mut Self::Cache,
         root: E::RootRef<'_>,
         ctx: &mut E::Context<'_>
     ) -> ESize<E> where P: Queron<E> + ?Sized {
@@ -227,5 +261,23 @@ impl<E> AsRefMut<Self> for Windows<E> where E: Env {
 
     fn as_mut(&mut self) -> &mut Self {
         self
+    }
+}
+
+pub struct GlobalCache<E> where E: Env {
+    pub cache: Vec<DynWidgetCache<E>>,
+}
+
+impl<E> WidgetCache<E> for GlobalCache<E> where E: Env {
+    fn reset_current(&mut self) {
+        for c in &mut self.cache {
+            c.reset_current();
+        }
+    }
+}
+
+impl<E> Default for GlobalCache<E> where E: Env {
+    fn default() -> Self {
+        unimplemented!()
     }
 }

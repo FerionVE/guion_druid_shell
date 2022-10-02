@@ -64,15 +64,18 @@ for<'a,'b> E: Env<RootRef<'a>=&'a Windows<E>,RootMut<'b>=&'b mut Windows<E>>,
         render.pre();
 
         //fill background
-        render.fill_rect(&(TestStyleColorType::Bg + &props), &mut s.ctx);
+        //TODO caching test
+        render.fill_rect(&(TestStyleColorType::Custom(guion::style::color::Color::from_rgba8([0,0,0,10])) + &props), &mut s.ctx);
 
         //process queued and render
-        render.force |= s.ctx.queue().as_ref().force_render;
+        render.force = false; //TODO force from piet backend
+
+        let force = render.force;
 
         let root: E::RootRef<'_> = &s.windows;
-        root.with_resolve(
+        root.with_window_by_path(
             path.clone(),
-            #[inline] |widget, ctx| {
+            #[inline] |widget, idx, ctx| {
                 let widget = widget.expect("Lost Widget in render");
 
                 let props = WithCurrentWidget{
@@ -81,9 +84,9 @@ for<'a,'b> E: Env<RootRef<'a>=&'a Windows<E>,RootMut<'b>=&'b mut Windows<E>>,
                     id: widget.id(),
                 };
 
-                widget.render(&props, &mut render, root, ctx);
+                widget.render(&props, &mut render, force, &mut s.caches.cache[idx], root, ctx);
             },
-            root, &mut s.ctx
+            &mut s.ctx
         );
 
         s.ctx.queue_mut().as_mut().force_render = false;

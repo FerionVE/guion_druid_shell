@@ -207,14 +207,15 @@ impl<E> App<E> where
             id: self.windows._id.clone(),
         };
 
-        let e = e.with_filter_path(self.windows.path_of_window(window_id,&mut self.ctx));
+        let event = e.with_filter_path(self.windows.path_of_window(window_id,&mut self.ctx));
 
         let ghandler = self.ctx.build_handler();
 
         ghandler._event_root(
             &self.windows,
             &props,
-            &e,
+            &event,
+            &mut self.caches,
             &self.windows,
             &mut self.ctx,
         )

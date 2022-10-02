@@ -201,4 +201,10 @@ impl<'r,E> RenderStdWidgets<E> for Render<'r,E> where
     fn set_cursor_specific(&mut self, cursor: &ESCursor<E>, c: &mut E::Context<'_>) {
         *self.next_cursor = Some(cursor.clone());
     }
+
+    type RenderPreprocessedTextStyleCachors = ();
+
+    fn render_preprocessed_text_cachors<Q>(&self, props: &Q) where Q: Queron<E> + ?Sized {
+        todo!()
+    }
 }

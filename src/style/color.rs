@@ -1,7 +1,7 @@
 use druid_shell::piet::Color as DSColor;
 
 use super::*;
-#[derive(Clone)]
+#[derive(Clone,PartialEq)]
 pub struct Color(pub DSColor);
 
 impl guion::style::color::Color for Color {
