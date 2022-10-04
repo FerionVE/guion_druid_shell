@@ -61,7 +61,7 @@ pub trait ViewDyn3<E>: 'static where for<'a,'b> E: Env<RootMut<'b>=&'b mut Windo
     fn as_any_mut(&mut self) -> &mut dyn Any;
 }
 
-impl<T,E> ViewDyn3<E> for T where for<'k> T: View<E,Mutable<'k>=Self> + 'static, for<'a,'b> E: Env<RootMut<'b>=&'b mut Windows<E>> {
+impl<T,E> ViewDyn3<E> for T where for<'k> T: View<E> + 'static, for<'a> T::Mutarget: MuTarget<E,Mutable<'a>=Self>, for<'a,'b> E: Env<RootMut<'b>=&'b mut Windows<E>> {
     #[inline]
     fn view_dyn(
         &self,
@@ -75,7 +75,7 @@ impl<T,E> ViewDyn3<E> for T where for<'k> T: View<E,Mutable<'k>=Self> + 'static,
         View::view( //TODO binding E::RootRef to &Windows triggers the horror compiler bug here
             self,
             g,
-            #[inline] move |root,_,callback,ctx| {
+            MutorForTarget::<T::Mutarget,(),_,_>::new(move |root,_,callback,_,ctx| {
                 let window = &mut root.windows[window_id];
                 let state: &mut Self = window.widget.as_any_mut().downcast_mut::<Self>().expect("TODO");
 
@@ -83,7 +83,7 @@ impl<T,E> ViewDyn3<E> for T where for<'k> T: View<E,Mutable<'k>=Self> + 'static,
                     Ok(state),
                     &(),ctx
                 )
-            },
+            }),
             root,
             ctx
         )

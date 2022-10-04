@@ -5,13 +5,15 @@ use guion::dispatchor::AsWidgetClosure;
 use guion::env::Env;
 use guion::error::ResolveResult;
 use guion::view::View;
+use guion::view::mut_target::MStatic;
+use guion::view::mutor_trait::MutorTo;
 use guion::widget::Widget;
 use guion::widget::as_widget::AsWidget;
 use guion::widget::cache::DynWidgetCache;
 use guion::widget::dyn_tunnel::WidgetDyn;
 use guion::widgets::button::Button;
 use guion::widgets::label::Label;
-use guion::{const_std_id, constraint, mutor};
+use guion::{const_std_id, constraint};
 use guion::layout::Orientation;
 use guion::widgets::pane::Pane;
 use guion_druid_shell::app::ArcApp;
@@ -31,15 +33,11 @@ const_std_id!(RootE PaneID LabelID ButtonID ButtonLabelID);
 impl View<ExampleEnv> for Model {
     type Viewed<'v,'z,MutorFn> = dyn WidgetDyn<ExampleEnv> + 'v where MutorFn: 'static, 'z: 'v, Self: 'z;
     type WidgetCache = DynWidgetCache<ExampleEnv>;
-    type Mutable<'k> = Model;
+    type Mutarget = MStatic<Self>;
 
     fn view<'d,MutorFn,DispatchFn,R>(&self, dispatch: DispatchFn, mutor: MutorFn, root: <ExampleEnv as Env>::RootRef<'_>, ctx: &mut <ExampleEnv as Env>::Context<'_>) -> R
     where
-        MutorFn: for<'s,'c,'cc> Fn(
-            <ExampleEnv as Env>::RootMut<'s>,&'s (),
-            &mut (dyn for<'is,'iss> FnMut(ResolveResult<&'is mut Self::Mutable<'iss>>,&'iss (),&'c mut <ExampleEnv as Env>::Context<'cc>)),
-            &'c mut <ExampleEnv as Env>::Context<'cc>
-        ) + Send + Sync + Clone + 'static,
+        MutorFn: MutorTo<(),ExampleEnv,Target=Self::Mutarget>,
         DispatchFn: guion::dispatchor::ViewDispatch<'d,Self,MutorFn,R,ExampleEnv>,
     {
         let widget = Pane::<ExampleEnv,_>::new(
@@ -49,7 +47,7 @@ impl View<ExampleEnv> for Model {
                 Label::immediate(LabelID(),self.count)
                     .with_size(constraint!(~0-@2.0|24)),
                 Button::immediate(ButtonID(),Label::immediate(ButtonLabelID(),"Increment"))
-                    .with_trigger_mut(mutor!(mutor =>| |s,c| s.count += 1; )),
+                    .with_trigger_mut(mutor.mutor_end_if((), |s,_,_,_| s.count += 1 )),
             ),
         );
 
@@ -69,9 +67,4 @@ fn main() {
 
     //while app.do_events() {}
     app.run();
-}
-
-/// required to correctly infer closure type
-fn trig<E,F>(f: F) -> F where E: Env, F: for<'a,'b> FnMut(&'a mut E::Context<'b>) {
-    f
 }
