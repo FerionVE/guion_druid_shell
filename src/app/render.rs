@@ -65,7 +65,7 @@ for<'a,'b> E: Env<RootRef<'a>=&'a Windows<E>,RootMut<'b>=&'b mut Windows<E>>,
         render.pre();
 
         // visual caching debug
-        render.fill_rect(&(TestStyleColorType::Custom(guion::style::color::Color::from_rgba8([0,0,0,10])) + &props), &mut s.ctx);
+        //render.fill_rect(&(TestStyleColorType::Custom(guion::style::color::Color::from_rgba8([0,0,0,10])) + &props), &mut s.ctx);
 
         //process queued and render
         render.force = false; //TODO force from piet backend

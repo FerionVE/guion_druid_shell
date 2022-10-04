@@ -28,19 +28,19 @@ pub struct Model {
 const_std_id!(RootE PaneID LabelID ButtonID ButtonLabelID);
 
 // Immutable immediate view, rendering and layouting done here
-impl<'z> View<'z,ExampleEnv> for Model {
-    type Viewed<'v,MutorFn> = dyn WidgetDyn<ExampleEnv> + 'v where MutorFn: 'static, 'z: 'v;
+impl View<ExampleEnv> for Model {
+    type Viewed<'v,'z,MutorFn> = dyn WidgetDyn<ExampleEnv> + 'v where MutorFn: 'static, 'z: 'v, Self: 'z;
     type WidgetCache = DynWidgetCache<ExampleEnv>;
     type Mutable<'k> = Model;
 
-    fn view<'d,MutorFn,DispatchFn,R>(&'d self, dispatch: DispatchFn, mutor: MutorFn, root: <ExampleEnv as Env>::RootRef<'_>, ctx: &mut <ExampleEnv as Env>::Context<'_>) -> R
+    fn view<'d,MutorFn,DispatchFn,R>(&self, dispatch: DispatchFn, mutor: MutorFn, root: <ExampleEnv as Env>::RootRef<'_>, ctx: &mut <ExampleEnv as Env>::Context<'_>) -> R
     where
         MutorFn: for<'s,'c,'cc> Fn(
             <ExampleEnv as Env>::RootMut<'s>,&'s (),
             &mut (dyn for<'is,'iss> FnMut(ResolveResult<&'is mut Self::Mutable<'iss>>,&'iss (),&'c mut <ExampleEnv as Env>::Context<'cc>)),
             &'c mut <ExampleEnv as Env>::Context<'cc>
         ) + Send + Sync + Clone + 'static,
-        DispatchFn: guion::dispatchor::ViewDispatch<'z,Self,MutorFn,R,ExampleEnv>,
+        DispatchFn: guion::dispatchor::ViewDispatch<'d,Self,MutorFn,R,ExampleEnv>,
     {
         let widget = Pane::<ExampleEnv,_>::new(
             PaneID(),
@@ -62,7 +62,7 @@ fn main() {
 
     app.add_window::<Model,_>(
         |window| {
-            window.set_title("7gui 01 Counter")
+            window.set_title("7GUIs 01 Counter")
         },
         Model{count:0},
     );

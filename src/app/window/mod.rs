@@ -61,7 +61,7 @@ pub trait ViewDyn3<E>: 'static where for<'a,'b> E: Env<RootMut<'b>=&'b mut Windo
     fn as_any_mut(&mut self) -> &mut dyn Any;
 }
 
-impl<'z,T,E> ViewDyn3<E> for T where for<'k> T: View<'z,E,Mutable<'k>=Self> + 'static, for<'a,'b> E: Env<RootMut<'b>=&'b mut Windows<E>> {
+impl<T,E> ViewDyn3<E> for T where for<'k> T: View<E,Mutable<'k>=Self> + 'static, for<'a,'b> E: Env<RootMut<'b>=&'b mut Windows<E>> {
     #[inline]
     fn view_dyn(
         &self,
@@ -69,7 +69,7 @@ impl<'z,T,E> ViewDyn3<E> for T where for<'k> T: View<'z,E,Mutable<'k>=Self> + 's
         window_id: usize,
         root: E::RootRef<'_>, ctx: &mut E::Context<'_>
     ) -> ProtectedReturn {
-        let g = ViewClosure::new(#[inline] move |widget: &T::Viewed<'_,_>,root,ctx|
+        let g = ViewClosure::new(#[inline] move |widget: &T::Viewed<'_,'_,_>,root,ctx|
             (dispatch)(widget.erase(), root, ctx)
         );
         View::view( //TODO binding E::RootRef to &Windows triggers the horror compiler bug here

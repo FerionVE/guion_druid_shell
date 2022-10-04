@@ -1,13 +1,14 @@
 #![feature(type_alias_impl_trait)]
 
 use std::borrow::Cow;
-use std::ops::Range;
+use std::ops::{Range, Sub};
 
 use guion::env::Env;
 use guion::error::ResolveResult;
 use guion::text::stor::TextStorMut;
 use guion::view::View;
 use guion::widget::Widget;
+use guion::widget::cache::DynWidgetCache;
 use guion::widget::dyn_tunnel::WidgetDyn;
 use guion::widgets::area::Area;
 use guion::widgets::button::Button;
@@ -16,7 +17,7 @@ use guion::widgets::label::Label;
 use guion::widgets::pbar::ProgressBar;
 use guion::widgets::splitpane::SplitPane;
 use guion::widgets::textbox::TextBox;
-use guion::{const_std_id, constraint, mutor};
+use guion::{const_std_id, constraint, mutor, view_widget};
 use guion::layout::Orientation;
 use guion::widgets::pane::Pane;
 use guion_druid_shell::app::ArcApp;
@@ -26,8 +27,7 @@ use guion_druid_shell::example::env::ExampleEnv;
 use guion_druid_shell::style::cursor::Cusror;
 
 pub struct Model {
-    button51_count: u32,
-    button52_count: u32,
+    submodel: SubModel,
     button_a_count: u32,
     button_b_count: u32,
     check: bool,
@@ -44,18 +44,19 @@ pub struct Model {
 const_std_id!(RootPane TopLabel Area51 Pane51 Button51 Button51Label Button52 Button52Label ProgBar Check CheckLabel Split2 ButtonA ButtonALabel ButtonB ButtonBLabel TextBoxx);
 
 // Immutable immediate view, rendering and layouting done here
-impl<'z> View<'z,ExampleEnv> for Model {
-    type Viewed<'v,MutorFn> = dyn WidgetDyn<ExampleEnv> + 'v where MutorFn: 'static, 'z: 'v;
+impl View<ExampleEnv> for Model {
+    type Viewed<'v,'z,MutorFn> = dyn WidgetDyn<ExampleEnv> + 'v where MutorFn: 'static, 'z: 'v, Self: 'z;
+    type WidgetCache = DynWidgetCache<ExampleEnv>;
     type Mutable<'k> = Model;
 
-    fn view<'d,MutorFn,DispatchFn,R>(&'d self, dispatch: DispatchFn, mutor: MutorFn, root: <ExampleEnv as Env>::RootRef<'_>, ctx: &mut <ExampleEnv as Env>::Context<'_>) -> R
+    fn view<'d,MutorFn,DispatchFn,R>(&self, dispatch: DispatchFn, mutor: MutorFn, root: <ExampleEnv as Env>::RootRef<'_>, ctx: &mut <ExampleEnv as Env>::Context<'_>) -> R
     where
         MutorFn: for<'s,'c,'cc> Fn(
             <ExampleEnv as Env>::RootMut<'s>,&'s (),
             &mut (dyn for<'is,'iss> FnMut(ResolveResult<&'is mut Self::Mutable<'iss>>,&'iss (),&'c mut <ExampleEnv as Env>::Context<'cc>)),
             &'c mut <ExampleEnv as Env>::Context<'cc>
         ) + Send + Sync + Clone + 'static,
-        DispatchFn: guion::dispatchor::ViewDispatch<'z,Self,MutorFn,R,ExampleEnv>,
+        DispatchFn: guion::dispatchor::ViewDispatch<'d,Self,MutorFn,R,ExampleEnv>,
     {
         let b_bounds = constraint!(~40-|64);
         let pb_bounds = constraint!(~0-|32~48);
@@ -68,23 +69,9 @@ impl<'z> View<'z,ExampleEnv> for Model {
                 Label::immediate(TopLabel(),"Label"),
                 Area::new(
                     Area51(),
-                    Pane::new(
-                        Pane51(),
-                        Orientation::Horizontal,
-                        (
-                            Button::immediate(
-                                Button51(),
-                                Label::immediate(Button51Label(),self.button51_count),
-                            )
-                                .with_size(b_bounds)
-                                .with_trigger_mut(mutor!(mutor =>| |s,c| {s.button51_count += 1; s.progress=(s.progress+0.1)%1.0;}; )),
-                            Button::immediate(
-                                Button52(),
-                                Label::immediate(Button52Label(),self.button52_count),
-                            )
-                                .with_size(b_bounds)
-                                .with_trigger_mut(mutor!(mutor =>| |s,c| {s.button52_count += 1; s.progress=(s.progress+0.1)%1.0;}; )),
-                        ),
+                    view_widget!(
+                        || &self.submodel,
+                        mutor => |s,c| SubModelMut{sub: &mut s.submodel, progress: &mut s.progress};&mut
                     ),
                 )
                     .with_state(self.area_scroll)
@@ -116,26 +103,72 @@ impl<'z> View<'z,ExampleEnv> for Model {
                     ),
                 )
                     .with_update(mutor!(mutor =>| |s,c,v| s.splitpane = v; )),
-                //TextBox::new(StdID::new()),
-                //ImmediateLabel{text:"Immediate Label".to_owned(),id:StdID::new()} ,
-                //ImmediateTextBox{text:"Immediate TextBox".to_owned(),id:StdID::new()},
                 TextBox::immediate_test(
                     TextBoxx(),
                     &self.tbtext,
                     self.tbscroll,
                     self.tbcursor,
                     mutor!(mutor =>| |s,c,tbupd,curs| {
-                        //let tbupd: Option<(Range<usize>,Cow<'static,str>)> = tbupd;
                         if let Some(tbupd) = &tbupd {
                             TextStorMut::<ExampleEnv>::replace(&mut s.tbtext,tbupd.0.clone(),tbupd.1.as_ref());
                         }
-                        //let curs: Option<Cusror> = curs;
                         if let Some(curs) = curs {
                             s.tbcursor = curs;
                         }
                     }; ),
                     mutor!(mutor =>| |s,c,scroll| s.tbscroll = scroll; ),
                 ),
+            ),
+        );
+
+        dispatch.call(widget.erase(), root, ctx)
+    }
+}
+
+pub struct SubModel {
+    button51_count: u32,
+    button52_count: u32,
+}
+
+pub struct SubModelMut<'a> {
+    sub: &'a mut SubModel,
+    progress: &'a mut f32,
+}
+
+impl View<ExampleEnv> for SubModel {
+    type Viewed<'v,'z,MutorFn> = dyn WidgetDyn<ExampleEnv> + 'v where MutorFn: 'static, 'z: 'v, Self: 'z;
+    type WidgetCache = DynWidgetCache<ExampleEnv>;
+    type Mutable<'k> = SubModelMut<'k>;
+
+    fn view<'d,MutorFn,DispatchFn,R>(&self, dispatch: DispatchFn, mutor: MutorFn, root: <ExampleEnv as Env>::RootRef<'_>, ctx: &mut <ExampleEnv as Env>::Context<'_>) -> R
+    where
+        MutorFn: for<'s,'c,'cc> Fn(
+            <ExampleEnv as Env>::RootMut<'s>,&'s (),
+            &mut (dyn for<'is,'iss> FnMut(ResolveResult<&'is mut Self::Mutable<'iss>>,&'iss (),&'c mut <ExampleEnv as Env>::Context<'cc>)),
+            &'c mut <ExampleEnv as Env>::Context<'cc>
+        ) + Send + Sync + Clone + 'static,
+        DispatchFn: guion::dispatchor::ViewDispatch<'d,Self,MutorFn,R,ExampleEnv>,
+    {
+        let b_bounds = constraint!(~40-|64);
+        let pb_bounds = constraint!(~0-|32~48);
+        let cb_bounds = constraint!(~0-|24);
+
+        let widget = Pane::<ExampleEnv,_>::new(
+            Pane51(),
+            Orientation::Horizontal,
+            (
+                Button::immediate(
+                    Button51(),
+                    Label::immediate(Button51Label(),self.button51_count),
+                )
+                    .with_size(b_bounds)
+                    .with_trigger_mut(mutor!(mutor =>| |s,c| {s.sub.button51_count += 1; *s.progress=(*s.progress+0.1)%1.0;}; )),
+                Button::immediate(
+                    Button52(),
+                    Label::immediate(Button52Label(),self.button52_count),
+                )
+                    .with_size(b_bounds)
+                    .with_trigger_mut(mutor!(mutor =>| |s,c| {s.sub.button52_count += 1; *s.progress=(*s.progress+0.1)%1.0;}; )),
             ),
         );
 
@@ -151,8 +184,10 @@ fn main() {
             window.set_title("zero")
         },
         Model{
-            button51_count: 0,
-            button52_count: 0,
+            submodel: SubModel {
+                button51_count: 0,
+                button52_count: 0,
+            },
             button_a_count: 0,
             button_b_count: 0,
             check: false,
