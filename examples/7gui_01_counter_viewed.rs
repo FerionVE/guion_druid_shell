@@ -37,7 +37,7 @@ impl View<ExampleEnv> for Model {
 
     fn view<'d,MutorFn,DispatchFn,R>(&self, dispatch: DispatchFn, mutor: MutorFn, root: <ExampleEnv as Env>::RootRef<'_>, ctx: &mut <ExampleEnv as Env>::Context<'_>) -> R
     where
-        MutorFn: MutorTo<(),ExampleEnv,Target=Self::Mutarget>,
+        MutorFn: MutorTo<(),Self::Mutarget,ExampleEnv>,
         DispatchFn: guion::dispatchor::ViewDispatch<'d,Self,MutorFn,R,ExampleEnv>,
     {
         let widget = Pane::<ExampleEnv,_>::new(

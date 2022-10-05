@@ -8,9 +8,9 @@ use guion::env::Env;
 use guion::error::ResolveResult;
 use guion::text::stor::TextStorMut;
 use guion::view::View;
-use guion::view::mut_target::{MStatic, MuTarget};
+use guion::view::mut_target::{MStatic, MuTarget, DynAtomStateMutTarget};
 use guion::view::mutor_trait::MutorTo;
-use guion::view::view_widget::view_widget_cb_if;
+use guion::view::view_widget::{view_widget_cb_if, view_widget_cb_if_dyn};
 use guion::widget::Widget;
 use guion::widget::cache::DynWidgetCache;
 use guion::widget::dyn_tunnel::WidgetDyn;
@@ -21,6 +21,7 @@ use guion::widgets::label::Label;
 use guion::widgets::pbar::ProgressBar;
 use guion::widgets::splitpane::SplitPane;
 use guion::widgets::textbox::TextBox;
+use guion::widgets::util::state::AtomStateMut;
 use guion::{const_std_id, constraint};
 use guion::layout::Orientation;
 use guion::widgets::pane::Pane;
@@ -55,7 +56,7 @@ impl View<ExampleEnv> for Model {
 
     fn view<'d,MutorFn,DispatchFn,R>(&self, dispatch: DispatchFn, mutor: MutorFn, root: <ExampleEnv as Env>::RootRef<'_>, ctx: &mut <ExampleEnv as Env>::Context<'_>) -> R
     where
-        MutorFn: MutorTo<(),ExampleEnv,Target=Self::Mutarget>,
+        MutorFn: MutorTo<(),Self::Mutarget,ExampleEnv>,
         DispatchFn: guion::dispatchor::ViewDispatch<'d,Self,MutorFn,R,ExampleEnv>,
     {
         let b_bounds = constraint!(~40-|64);
@@ -76,16 +77,18 @@ impl View<ExampleEnv> for Model {
                     ),
                 )
                     .with_state(self.area_scroll)
-                    .with_scroll_updater(mutor.mutor_end_if((), |s,_,v: ScrollUpdate,_| s.area_scroll = v.offset )),
-                    //.with_scroll_atomstate(mutor!(ExampleEnv;mutor => |s,c| &mut s.area_scroll; )),
+                    .with_scroll_updater(mutor.mutor_end_if((), |s,_,v: ScrollUpdate,_| s.area_scroll = v.offset ))
+                    .with_scroll_atomstate(mutor.for_view_cb_if::<DynAtomStateMutTarget<(i32,i32)>,_,_>((), |s,_,cb,_,ctx| (cb)(Ok(&mut s.area_scroll),&(),ctx) ))
+                    ,
                 ProgressBar::new(ProgBar(), Orientation::Horizontal)
                     .with_value(self.progress)
                     .with_size(pb_bounds),
                 CheckBox::new(Check(), self.check)
                     .with_caption(Label::immediate(CheckLabel(),"CheckBox"))
                     .with_size(cb_bounds)
-                    .with_update(mutor.mutor_end_if((), |s,_,v,_| s.check = v )),
-                    //.with_atomstate(mutor!(ExampleEnv;mutor => |s,c| &mut s.check; )),
+                    .with_update(mutor.mutor_end_if((), |s,_,v,_| s.check = v ))
+                    .with_atomstate(mutor.for_view_cb_if::<DynAtomStateMutTarget<bool>,_,_>((), |s,_,cb,_,ctx| (cb)(Ok(&mut s.check),&(),ctx) ))
+                    ,
                 SplitPane::new(
                     Split2(), Orientation::Horizontal, self.splitpane,
                     (
@@ -103,7 +106,9 @@ impl View<ExampleEnv> for Model {
                             .with_trigger_mut(mutor.mutor_end_if((), |s,_,_,_| {s.button_b_count += 1; s.progress=(s.progress+0.1)%1.0;} )),
                     ),
                 )
-                    .with_update(mutor.mutor_end_if((), |s,_,v,_| s.splitpane = v )),
+                    .with_update(mutor.mutor_end_if((), |s,_,v,_| s.splitpane = v ))
+                    .with_atomstate(mutor.for_view_cb_if::<DynAtomStateMutTarget<f32>,_,_>((), |s,_,cb,_,ctx| (cb)(Ok(&mut s.splitpane),&(),ctx) ))
+                    ,
                 TextBox::immediate_test(
                     TextBoxx(),
                     &self.tbtext,
