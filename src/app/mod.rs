@@ -7,7 +7,6 @@ use guion::backend::Backend;
 use guion::env::Env;
 use guion::error::ResolveResult;
 use guion::event::imp::StdVarSup;
-use guion::id::WidgetIDAlloc;
 use guion::render::widgets::RenderStdWidgets;
 use guion::util::AsRefMut;
 use guion::util::bounds::Dims;
@@ -40,10 +39,10 @@ pub struct App<E> where E: Env {
     ctx: E::Context<'static>,
 }
 
-impl<E> ArcApp<E> where E: Env, for<'a> E::Context<'a>: AsRefMut<DSState>, E::WidgetID: WidgetIDAlloc {
+impl<E> ArcApp<E> where E: Env, for<'a> E::Context<'a>: AsRefMut<DSState> {
     pub fn new(mut ctx: E::Context<'static>) -> Self {
         let ds_app = druid_shell::Application::new().unwrap(); //TODO error handling in all crate
-        let windows = Windows{windows: vec![],_id: WidgetIDAlloc::new_id()};
+        let windows = Windows{windows: vec![]};
         ctx.as_mut().clipboard = Some(ds_app.clipboard());
         let app = App {
             ds_app,

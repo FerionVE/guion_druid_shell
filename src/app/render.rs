@@ -2,6 +2,7 @@ use druid_shell::piet::{Piet, CairoTextLayout};
 use guion::aliases::{ECQueue, ERenderer, ESCursor, ETextLayout};
 use guion::backend::Backend;
 use guion::env::Env;
+use guion::newpath::{FixedIdx, PathFragment};
 use guion::render::{Render as _, WithTestStyle, TestStyleColorType};
 use guion::render::widgets::RenderStdWidgets;
 use guion::style::selectag::standard::StdSelectag;
@@ -12,7 +13,7 @@ use guion::root::RootRef;
 use guion::widget::Widget;
 use guion::widget::cache::WidgetCache;
 use guion::widget::dyn_tunnel::WidgetDyn;
-use guion::widget::stack::{WithCurrentBounds, WithCurrentWidget};
+use guion::widget::stack::{WithCurrentBounds};
 
 use crate::render::Render;
 use crate::style::cursor::IntoGuionDruidShellCursor;
@@ -74,19 +75,15 @@ for<'a,'b> E: Env<RootRef<'a>=&'a Windows<E>,RootMut<'b>=&'b mut Windows<E>>,
 
         let root: E::RootRef<'_> = &s.windows;
         root.with_window_by_path(
-            path.clone(),
+            &path,
             #[inline] |widget, idx, ctx| {
                 let widget = widget.expect("Lost Widget in render");
 
-                let props = WithCurrentWidget{
-                    inner: props,
-                    path: path,
-                    id: widget.id(),
-                };
-
                 s.caches.cache[idx].reset_current();
 
-                widget.render(&props, &mut render, force, &mut s.caches.cache[idx], root, ctx);
+                let path = FixedIdx(idx).push_on_stack(());
+
+                widget.render(&path, &props, &mut render, force, &mut s.caches.cache[idx], root, ctx);
             },
             &mut s.ctx
         );

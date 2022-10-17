@@ -9,8 +9,8 @@ use guion::error::ResolveResult;
 use guion::text::stor::TextStorMut;
 use guion::view::View;
 use guion::view::mut_target::{MStatic, MuTarget, DynAtomStateMutTarget};
-use guion::view::mutor_trait::MutorTo;
-use guion::view::view_widget::{view_widget_cb_if, view_widget_cb_if_dyn};
+use guion::view::mutor_trait::{MutorToBuilderDyn, MutorToBuilderExt};
+use guion::view::view_widget::view_widget_cb_if;
 use guion::widget::Widget;
 use guion::widget::cache::DynWidgetCache;
 use guion::widget::dyn_tunnel::WidgetDyn;
@@ -21,12 +21,10 @@ use guion::widgets::label::Label;
 use guion::widgets::pbar::ProgressBar;
 use guion::widgets::splitpane::SplitPane;
 use guion::widgets::textbox::TextBox;
-use guion::widgets::util::state::AtomStateMut;
-use guion::{const_std_id, constraint};
+use guion::constraint;
 use guion::layout::Orientation;
 use guion::widgets::pane::Pane;
 use guion_druid_shell::app::ArcApp;
-use guion_druid_shell::app::windows::Windows;
 use guion_druid_shell::example::ctx::ExampleCtx;
 use guion_druid_shell::example::env::ExampleEnv;
 use guion_druid_shell::style::cursor::Cusror;
@@ -45,34 +43,25 @@ pub struct Model {
     tbcursor: Cusror,
 }
 
-// Define some persistent WidgetIDs
-const_std_id!(RootPane TopLabel Area51 Pane51 Button51 Button51Label Button52 Button52Label ProgBar Check CheckLabel Split2 ButtonA ButtonALabel ButtonB ButtonBLabel TextBoxx);
-
 // Immutable immediate view, rendering and layouting done here
 impl View<ExampleEnv> for Model {
-    type Viewed<'v,'z,MutorFn> = dyn WidgetDyn<ExampleEnv> + 'v where MutorFn: 'static, 'z: 'v, Self: 'z;
     type WidgetCache = DynWidgetCache<ExampleEnv>;
     type Mutarget = MStatic<Model>;
 
-    fn view<'d,MutorFn,DispatchFn,R>(&self, dispatch: DispatchFn, mutor: MutorFn, root: <ExampleEnv as Env>::RootRef<'_>, ctx: &mut <ExampleEnv as Env>::Context<'_>) -> R
-    where
-        MutorFn: MutorTo<(),Self::Mutarget,ExampleEnv>,
-        DispatchFn: guion::dispatchor::ViewDispatch<'d,Self,MutorFn,R,ExampleEnv>,
+    fn view<R>(&self, dispatch: DiBoX<'_,'_,R,ExampleEnv>, mutor: &(dyn MutorToBuilderDyn<(),Self::Mutarget,ExampleEnv>+'_), root: <ExampleEnv as Env>::RootRef<'_>, ctx: &mut <ExampleEnv as Env>::Context<'_>) -> R
     {
         let b_bounds = constraint!(~40-|64);
         let pb_bounds = constraint!(~0-|32~48);
         let cb_bounds = constraint!(~0-|24);
 
         let widget = Pane::<ExampleEnv,_>::new(
-            RootPane(),
             Orientation::Vertical,
             (
-                Label::immediate(TopLabel(),"Label"),
+                Label::of_text("Label"),
                 Area::new(
-                    Area51(),
                     view_widget_cb_if(
                         || &self.submodel,
-                        (),mutor.clone(),|s,_,callback,_,ctx|
+                        (),mutor,|s,_,callback,_,ctx|
                             (callback)(Ok(&mut SubModelMut{sub: &mut s.submodel, progress: &mut s.progress}),&(),ctx)
                     ),
                 )
@@ -80,27 +69,25 @@ impl View<ExampleEnv> for Model {
                     .with_scroll_updater(mutor.mutor_end_if((), |s,_,v: ScrollUpdate,_| s.area_scroll = v.offset ))
                     .with_scroll_atomstate(mutor.for_view_cb_if::<DynAtomStateMutTarget<(i32,i32)>,_,_>((), |s,_,cb,_,ctx| (cb)(Ok(&mut s.area_scroll),&(),ctx) ))
                     ,
-                ProgressBar::new(ProgBar(), Orientation::Horizontal)
+                ProgressBar::new(Orientation::Horizontal)
                     .with_value(self.progress)
                     .with_size(pb_bounds),
-                CheckBox::new(Check(), self.check)
-                    .with_caption(Label::immediate(CheckLabel(),"CheckBox"))
+                CheckBox::new(self.check)
+                    .with_caption(Label::of_text("CheckBox"))
                     .with_size(cb_bounds)
                     .with_update(mutor.mutor_end_if((), |s,_,v,_| s.check = v ))
                     .with_atomstate(mutor.for_view_cb_if::<DynAtomStateMutTarget<bool>,_,_>((), |s,_,cb,_,ctx| (cb)(Ok(&mut s.check),&(),ctx) ))
                     ,
                 SplitPane::new(
-                    Split2(), Orientation::Horizontal, self.splitpane,
+                    Orientation::Horizontal, self.splitpane,
                     (
-                        Button::immediate(
-                            ButtonA(),
-                            Label::immediate(ButtonALabel(),self.button_a_count),
+                        Button::of_text(
+                            Label::of_text(self.button_a_count),
                         )
                             .with_size(b_bounds)
                             .with_trigger_mut(mutor.mutor_end_if((), |s,_,_,_| {s.button_a_count += 1; s.progress=(s.progress+0.1)%1.0;} )),
-                        Button::immediate(
-                            ButtonB(),
-                            Label::immediate(ButtonBLabel(),self.button_b_count),
+                        Button::of_text(
+                            Label::of_text(self.button_b_count),
                         )
                             .with_size(b_bounds)
                             .with_trigger_mut(mutor.mutor_end_if((), |s,_,_,_| {s.button_b_count += 1; s.progress=(s.progress+0.1)%1.0;} )),
@@ -110,7 +97,6 @@ impl View<ExampleEnv> for Model {
                     .with_atomstate(mutor.for_view_cb_if::<DynAtomStateMutTarget<f32>,_,_>((), |s,_,cb,_,ctx| (cb)(Ok(&mut s.splitpane),&(),ctx) ))
                     ,
                 TextBox::immediate_test(
-                    TextBoxx(),
                     &self.tbtext,
                     self.tbscroll,
                     self.tbcursor,
@@ -127,7 +113,7 @@ impl View<ExampleEnv> for Model {
             ),
         );
 
-        dispatch.call(widget.erase(), root, ctx)
+        (dispatch)(widget.erase(), root, ctx)
     }
 }
 
@@ -147,40 +133,37 @@ impl<E> MuTarget<E> for SubModelMutTarget {
     type Mutable<'k> = SubModelMut<'k>;
 }
 
+type DiBoX<'a,'b,R,E> = &'a mut (dyn for<'w,'ww,'r,'c,'cc> FnMut(&'w (dyn WidgetDyn<E>+'ww),<E as Env>::RootRef<'r>,&'c mut <E as Env>::Context<'cc>) -> R + 'b);
+
+// Immutable immediate view, rendering and layouting done here
 impl View<ExampleEnv> for SubModel {
-    type Viewed<'v,'z,MutorFn> = dyn WidgetDyn<ExampleEnv> + 'v where MutorFn: 'static, 'z: 'v, Self: 'z;
     type WidgetCache = DynWidgetCache<ExampleEnv>;
     type Mutarget = SubModelMutTarget;
 
-    fn view<'d,MutorFn,DispatchFn,R>(&self, dispatch: DispatchFn, mutor: MutorFn, root: <ExampleEnv as Env>::RootRef<'_>, ctx: &mut <ExampleEnv as Env>::Context<'_>) -> R
-    where
-        MutorFn: MutorTo<(),ExampleEnv,Target=Self::Mutarget>,
-        DispatchFn: guion::dispatchor::ViewDispatch<'d,Self,MutorFn,R,ExampleEnv>,
+    fn view<R>(&self, dispatch: DiBoX<'_,'_,R,ExampleEnv>, mutor: &(dyn MutorToBuilderDyn<(),Self::Mutarget,ExampleEnv>+'_), root: <ExampleEnv as Env>::RootRef<'_>, ctx: &mut <ExampleEnv as Env>::Context<'_>) -> R
     {
         let b_bounds = constraint!(~40-|64);
         let pb_bounds = constraint!(~0-|32~48);
         let cb_bounds = constraint!(~0-|24);
 
         let widget = Pane::<ExampleEnv,_>::new(
-            Pane51(),
             Orientation::Horizontal,
             (
-                Button::immediate(
-                    Button51(),
-                    Label::immediate(Button51Label(),self.button51_count),
+                Button::of_text(
+                    Label::of_text(self.button51_count),
                 )
                     .with_size(b_bounds)
                     .with_trigger_mut(mutor.mutor_end_if((), |s,_,_,_| {s.sub.button51_count += 1; *s.progress=((*s.progress)+0.1)%1.0;} )),
-                Button::immediate(
-                    Button52(),
-                    Label::immediate(Button52Label(),self.button52_count),
+                Button::of_text(
+                    Label::of_text(self.button52_count),
                 )
                     .with_size(b_bounds)
                     .with_trigger_mut(mutor.mutor_end_if((), |s,_,_,_| {s.sub.button52_count += 1; *s.progress=((*s.progress)+0.1)%1.0;} )),
             ),
         );
 
-        dispatch.call(widget.erase(), root, ctx)
+        
+        (dispatch)(widget.erase(), root, ctx)
     }
 }
 

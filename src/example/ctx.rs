@@ -3,9 +3,7 @@ use guion::ctx::clipboard::CtxClipboardAccess;
 use guion::env::Env;
 use guion::handler::HandlerBuilder;
 use guion::handler::standard::StdHandler;
-use guion::id::standard::StdID;
 use guion::state::CtxStdState;
-use guion::state::dyn_state::DynState;
 use guion::util::AsRefMut;
 use std::collections::HashMap;
 use std::marker::PhantomData;
@@ -127,14 +125,14 @@ impl CtxClipboardAccess<ExampleEnv> for ExampleCtx<'_> {
     }
 }
 
-impl DynState<ExampleEnv> for ExampleCtx<'_> {
-    fn remote_state_or_default<T>(&self, id: StdID) -> T where T: Default + Clone + 'static {
-        self.handler.remote_state_or_default(id)
-    }
-    fn push_remote_state<T>(&mut self, id: StdID, v: T) where T: 'static {
-        self.handler.push_remote_state(id,v)
-    }
-}
+// impl DynState<ExampleEnv> for ExampleCtx<'_> {
+//     fn remote_state_or_default<T>(&self, id: StdID) -> T where T: Default + Clone + 'static {
+//         self.handler.remote_state_or_default(id)
+//     }
+//     fn push_remote_state<T>(&mut self, id: StdID, v: T) where T: 'static {
+//         self.handler.push_remote_state(id,v)
+//     }
+// }
 
 fn akw22(a: &<ExampleEnv as Env>::Context<'_>) {
     let r = AsRefMut::<ExampleHandler>::as_ref(a);

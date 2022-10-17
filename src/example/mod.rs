@@ -2,7 +2,8 @@ use std::any::Any;
 
 use guion::env::Env;
 use guion::event_new::downcast_map::EventDowncastMap;
-use guion::path::WidgetPath;
+use guion::newpath::{PathResolvusDyn, PathStack};
+use guion::queron::Queron;
 use guion::text::stor::TextStor;
 use guion::traitcast::*;
 use guion::widget::Widget;
@@ -30,22 +31,24 @@ unsafe impl TraitcastImpl<'static,dyn Any> for dyn Widget<ExampleEnv> {
 pub struct StupidEventDowncastMap;
 
 impl<E> EventDowncastMap<E> for StupidEventDowncastMap where E: Env {
-    fn event_downcast_map<W,S,Evt>(
+    fn event_downcast_map<W,Ph,S,Evt>(
         widget: &W,
+        path: &Ph,
         stack: &S,
         event: &Evt,
+        route_to_widget: Option<&(dyn PathResolvusDyn<E>+'_)>,
         cache: &mut W::Cache,
         root: E::RootRef<'_>,
         ctx: &mut E::Context<'_>,
     ) -> guion::EventResp
     where
-        W: Widget<E> + ?Sized, S: guion::queron::Queron<E> + ?Sized, Evt: guion::event_new::Event<E> + ?Sized
+        W: Widget<E> + ?Sized, Ph: PathStack<E> + ?Sized, S: Queron<E> + ?Sized, Evt: guion::event_new::Event<E> + ?Sized
     {
         use guion::event_new::variants::StdVariant;
         use guion::event::standard::variants::*;
 
         guion::event_downcast_map_tryion!(
-            widget, stack, event, cache, root, ctx;
+            widget, path, stack, event, route_to_widget, cache, root, ctx;
             StdVariant<RootEvent<E>,E>;
             StdVariant<MouseMove,E>;
             StdVariant<MouseEnter,E>;
@@ -53,6 +56,6 @@ impl<E> EventDowncastMap<E> for StupidEventDowncastMap where E: Env {
             StdVariant<Focus,E>;
             StdVariant<Unfocus,E>
         );
-        widget.event_direct(stack, event, cache, root, ctx)
+        widget.event_direct(path, stack, event, route_to_widget, cache, root, ctx)
     }
 }

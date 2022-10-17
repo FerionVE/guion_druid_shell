@@ -1,52 +1,57 @@
+use std::marker::PhantomData;
+
+use guion::dispatchor::AsWidgetClosure;
+use guion::util::tabulate::{TabulateResponse, TabulateOrigin, TabulateDirection};
+use guion::{EventResp, event_new};
 use guion::aliases::{ESize, EStyle, ERenderer};
 use guion::ctx::Context;
 use guion::env::Env;
-use guion::path::WidgetPath;
+use guion::newpath::{PathResolvus, SimplePathResolvus, FixedIdx, PathResolvusDyn, PathStack, SimplePathStack, PathFragment};
 use guion::queron::Queron;
 use guion::root::{RootRef, RootMut};
 use guion::util::AsRefMut;
 use guion::util::bounds::Bounds;
 use guion::widget::cache::{DynWidgetCache, WidgetCache};
 use guion::widget::dyn_tunnel::WidgetDyn;
-use guion::widget::stack::{WithCurrentWidget, WithCurrentBounds};
-use guion::widget::{Widget};
+use guion::widget::stack::{WithCurrentBounds};
+use guion::widget::{Widget, WidgetWithResolveChildDyn};
 
 use super::window::Window;
 
 pub struct Windows<E> where E: Env {
     pub windows: Vec<Window<E>>,
-    pub _id: E::WidgetID, //TODO not required when WidgetIdent is gone
 }
 
 // impl WidgetRoot
 
 impl<E> Windows<E> where for<'a,'b> E: Env<RootRef<'a>=&'a Windows<E>,RootMut<'b>=&'b mut Windows<E>> {
-    pub(crate) fn path_of_window(&self, window: usize, ctx: &mut E::Context<'_>) -> E::WidgetPath {
-        //TODO isn't it stupid that we actually need to view it to get the path of the widget? It's time for a new path system
-        self.windows[window].view(|w,_,_| w.in_parent_path(WidgetPath::empty()) ,window,self,ctx) //TODO empty default constructor for path
+    pub(crate) fn path_of_window(&self, window: usize, ctx: &mut E::Context<'_>) -> impl PathResolvus<E> {
+        SimplePathResolvus {
+            inner: (),
+            value: FixedIdx(window),
+            _p: PhantomData,
+        }
     }
 
     pub fn with_window_by_path<'s,'l:'s,F,R>(
         &'s self,
-        i: E::WidgetPath,
-        callback: F,
+        i: &(dyn PathResolvusDyn<E>+'_),
+        mut callback: F,
         ctx: &mut E::Context<'_>,
     ) -> R
     where 
-        F: for<'w,'ww,'c,'cc> FnOnce(Result<&'w (dyn WidgetDyn<E>+'ww),()>,usize,&'c mut E::Context<'cc>) -> R,
+        F: for<'w,'ww,'c,'cc> FnMut(Result<&'w (dyn WidgetDyn<E>+'ww),()>,usize,&'c mut E::Context<'cc>) -> R,
         Self: 'l
     {
-        for c in 0..self.childs() {
-            if let Some(r) = self.with_child(
-                c, 
-                #[inline] |w,_| w.unwrap().resolved_by_path(&i),
-                self.fork(), ctx,
-            ) {
-                return self.with_child(
-                    c,
-                    #[inline] |child,ctx| (callback)(child,c,ctx),
-                    self.fork(), ctx,
-                );
+        if let Some(idx) = i.try_fragment::<FixedIdx>() {
+            if let Some(v) = self.windows.get(idx.0) {
+                return v.view(#[inline] |child,root,ctx| {
+                    (callback)(
+                        Ok(child.erase()),
+                        idx.0,
+                        ctx,
+                    )
+                },idx.0,self.fork(),ctx);
             }
         }
 
@@ -70,12 +75,12 @@ impl<'g,E> RootRef<E> for &'g Windows<E> where for<'a,'b> E: Env<RootRef<'a>=&'a
 
     fn with_widget<'s,'l:'s,F,R>(
         &'s self,
-        i: E::WidgetPath,
+        i: &(dyn PathResolvusDyn<E>+'_),
         callback: F,
         ctx: &mut E::Context<'_>,
     ) -> R
     where 
-        F: for<'w,'ww,'c,'cc> FnOnce(Result<&'w (dyn WidgetDyn<E>+'ww),E::Error>,&'c mut E::Context<'cc>) -> R,
+        F: for<'w,'ww,'c,'cc> FnMut(Result<&'w (dyn WidgetDyn<E>+'ww),E::Error>,&'c mut E::Context<'cc>) -> R,
         Self: 'l
     {
         self.with_resolve(
@@ -85,7 +90,7 @@ impl<'g,E> RootRef<E> for &'g Windows<E> where for<'a,'b> E: Env<RootRef<'a>=&'a
         )
     }
 
-    fn trace_bounds(&self, ctx: &mut <E as Env>::Context<'_>, i: <E as Env>::WidgetPath, b: &Bounds, e: &EStyle<E>, force: bool) -> Result<Bounds,<E as Env>::Error> {
+    fn trace_bounds(&self, ctx: &mut E::Context<'_>, i: &(dyn PathResolvusDyn<E>+'_), b: &Bounds, e: &EStyle<E>, force: bool) -> Result<Bounds,E::Error> {
         todo!()
     }
 }
@@ -135,63 +140,87 @@ impl<'g,E> RootMut<E> for &'g mut Windows<E> where for<'a,'b> E: Env<RootRef<'a>
 impl<E> Widget<E> for Windows<E> where for<'a,'b> E: Env<RootRef<'a>=&'a Self,RootMut<'b>=&'b mut Self> {
     type Cache = GlobalCache<E>;
 
-    fn id(&self) -> E::WidgetID {
-        self._id.clone()
-    }
-
-    fn _render<P>(
+    fn _render<P,Ph>(
         &self,
+        path: &Ph,
         stack: &P,
         renderer: &mut ERenderer<'_,E>,
         force_render: bool,
         cache: &mut Self::Cache,
         root: E::RootRef<'_>,
         ctx: &mut E::Context<'_>
-    ) where P: Queron<E> + ?Sized {
+    ) where Ph: PathStack<E> + ?Sized, P: Queron<E> + ?Sized {
         unimplemented!()
     }
 
-    fn _event_direct<P,Evt>(
+    fn _event_direct<P,Ph,Evt>(
         &self,
+        path: &Ph,
         stack: &P,
-        event: &Evt,
+        event: &Evt, // TODO what if e.g. bounds change, if it's validated by parents then it's not signaled here
+        route_to_widget: Option<&(dyn PathResolvusDyn<E>+'_)>,
         cache: &mut Self::Cache,
         root: E::RootRef<'_>,
         ctx: &mut E::Context<'_>
-    ) -> guion::EventResp
-    where
-        P: Queron<E> + ?Sized, Evt: guion::event_new::Event<E> + ?Sized
+    ) -> EventResp where Ph: PathStack<E> + ?Sized, P: Queron<E> + ?Sized, Evt: event_new::Event<E> + ?Sized
     {
         let mut passed = false;
 
+        let route_to_window = match route_to_widget {
+            // Event sent to this widget itself
+            Some(v) if v.inner().is_none() => None,
+            // Event sent with path to specific child
+            Some(v) => if let Some(v) = v.try_fragment::<FixedIdx>() {
+                if v.0 < self.windows.len() {
+                    Some(v.0)
+                } else {
+                    panic!("Misrouted Window")
+                }
+            } else {
+                panic!("Misrouted Window")
+            },
+            // Event sent without path filter
+            None => None,
+        };
+
         for i in 0..self.childs() {
+            if let Some(v) = route_to_window {
+                if v != i {
+                    continue;
+                }
+            }
+
             self.windows[i].view(|child,root,ctx| {
                 let stack = WithCurrentBounds {
-                    inner: WithCurrentWidget {
-                        inner: stack,
-                        path: child.in_parent_path(WidgetPath::empty()),
-                        id: child.id(),
-                    },
+                    inner: stack,
                     bounds: Bounds::from_size(self.windows[i].dims),
                     viewport: Bounds::from_size(self.windows[i].dims),
                 };
 
                 cache.cache[i].reset_current();
 
-                passed |= child.event_direct(&stack,event,&mut cache.cache[i], root,ctx);
+                passed |= child.event_direct(
+                    &FixedIdx(i).push_on_stack(path),
+                    &stack,
+                    event,
+                    route_to_widget.and_then(PathResolvus::inner),
+                    &mut cache.cache[i],
+                    root,ctx
+                );
             },i,root,ctx)
         }
         //eprintln!("e{}",passed);
         passed
     }
 
-    fn _size<P>(
+    fn _size<P,Ph>(
         &self,
+        path: &Ph,
         stack: &P,
         cache: &mut Self::Cache,
         root: E::RootRef<'_>,
         ctx: &mut E::Context<'_>
-    ) -> ESize<E> where P: Queron<E> + ?Sized {
+    ) -> ESize<E> where Ph: PathStack<E> + ?Sized, P: Queron<E> + ?Sized {
         unimplemented!()
     }
 
@@ -202,12 +231,12 @@ impl<E> Widget<E> for Windows<E> where for<'a,'b> E: Env<RootRef<'a>=&'a Self,Ro
     fn with_child<'s,F,R>(
         &'s self,
         i: usize,
-        callback: F,
+        mut callback: F,
         root: E::RootRef<'s>,
         ctx: &mut E::Context<'_>
     ) -> R
     where
-        F: for<'w,'ww,'c,'cc> FnOnce(Result<&'w (dyn WidgetDyn<E>+'ww),()>,&'c mut E::Context<'cc>) -> R
+        F: for<'w,'ww,'c,'cc> FnMut(Result<&'w (dyn WidgetDyn<E>+'ww),()>,&'c mut E::Context<'cc>) -> R
     {
         self.windows[i].view(|child,root,ctx| {
             (callback)(Ok(child),ctx)
@@ -215,10 +244,58 @@ impl<E> Widget<E> for Windows<E> where for<'a,'b> E: Env<RootRef<'a>=&'a Self,Ro
     }
 
     //TODO Widget::child_bounds isn't a thing in the new render/layout/caching concept
-    fn child_bounds<P>(&self, stack: &P, b: &Bounds, force: bool, root: E::RootRef<'_>, ctx: &mut E::Context<'_>) -> Result<Vec<Bounds>,()> where P: Queron<E> + ?Sized {
-        Ok(self.windows.iter()
-            .map(|r| Bounds::from_size(todo!()) )
-            .collect::<Vec<_>>())
+    // fn child_bounds<P>(&self, stack: &P, b: &Bounds, force: bool, root: E::RootRef<'_>, ctx: &mut E::Context<'_>) -> Result<Vec<Bounds>,()> where P: Queron<E> + ?Sized {
+    //     Ok(self.windows.iter()
+    //         .map(|r| Bounds::from_size(todo!()) )
+    //         .collect::<Vec<_>>())
+    // }
+
+    fn with_resolve_child<'s,F,R>(
+        &'s self,
+        sub_path: &(dyn PathResolvusDyn<E>+'_),
+        mut callback: F,
+        root: E::RootRef<'s>,
+        ctx: &mut E::Context<'_>
+    ) -> R
+    where
+        F: for<'w,'c,'cc> FnMut(Result<WidgetWithResolveChildDyn<'w,E>,E::Error>,&'c mut E::Context<'cc>) -> R
+    {
+        if let Some(idx) = sub_path.try_fragment::<FixedIdx>() {
+            if let Some(v) = self.windows.get(idx.0) {
+                return v.view(#[inline] |child,root,ctx| {
+                    (callback)(
+                        Ok(WidgetWithResolveChildDyn {
+                            idx: 0,
+                            sub_path: sub_path.inner().unwrap(),
+                            widget: child.erase(),
+                        }),
+                        ctx,
+                    )
+                },idx.0,root,ctx);
+            }
+        }
+        (callback)(Err(todo!()),ctx)
+    }
+
+    fn _call_tabulate_on_child_idx<P,Ph>(
+        &self,
+        idx: usize,
+        path: &Ph,
+        stack: &P,
+        op: TabulateOrigin<E>,
+        dir: TabulateDirection,
+        root: E::RootRef<'_>,
+        ctx: &mut E::Context<'_>
+    ) -> Result<TabulateResponse<E>,E::Error>
+    where 
+        Ph: PathStack<E> + ?Sized, P: Queron<E> + ?Sized
+    {
+        if let Some(v) = self.windows.get(idx) {
+            return v.view(#[inline] |child,root,ctx| {
+                child._tabulate(&FixedIdx(idx).push_on_stack(path),stack,op.clone(),dir,root,ctx)
+            },idx,root,ctx);
+        }
+        Err(todo!())
     }
 
     fn focusable(&self) -> bool {

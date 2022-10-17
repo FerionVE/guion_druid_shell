@@ -7,13 +7,11 @@ use guion::event::imp::StdVarSup;
 use guion::event::variant::Variant;
 use guion::event_new::variants::StdVariant;
 use guion::handler::Handler;
-use guion::path::WidgetPath;
 use guion::render::WithTestStyle;
 use guion::util::AsRefMut;
 use guion::event::Event as GEvent;
 use guion::event::standard::variants::RootEvent;
 use guion::util::bounds::{Bounds, Offset};
-use guion::widget::stack::WithCurrentWidget;
 
 use crate::app::{App, ArcApp};
 use crate::app::windows::Windows;
@@ -195,26 +193,23 @@ impl<E> App<E> where
     //     link._event_root(&e)
     // }
 
-    fn send_legacy_root_event<V>(&mut self, window_id: usize, e: StdVariant<V,E>) -> bool where V: Variant<E> + Clone {
+    fn send_legacy_root_event<V>(&mut self, window_id: usize, event: StdVariant<V,E>) -> bool where V: Variant<E> + Clone {
         let test_style = stupid_test_style_variants::<E>();
         let test_style = stupid_test_style(&test_style);
         let props = WithTestStyle((),test_style);
         
         // TODO where do we inject inital window bounds?
-        let props = WithCurrentWidget{
-            inner: props,
-            path: WidgetPath::empty(),
-            id: self.windows._id.clone(),
-        };
 
-        let event = e.with_filter_path(self.windows.path_of_window(window_id,&mut self.ctx));
+        let window_path = self.windows.path_of_window(window_id,&mut self.ctx);
 
         let ghandler = self.ctx.build_handler();
 
         ghandler._event_root(
             &self.windows,
+            &(),
             &props,
             &event,
+            Some(&window_path),
             &mut self.caches,
             &self.windows,
             &mut self.ctx,

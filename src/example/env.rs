@@ -2,9 +2,7 @@ use druid_shell::piet::Piet;
 use guion::backend::Backend;
 use guion::env::Env;
 use guion::event::standard::dyn_evt::DynEvent;
-use guion::id::standard::StdID;
 use guion::layout::StdGonstraints;
-use guion::path::standard::SimplePath;
 use guion::util::AsRefMut;
 use guion::util::error::GuionError;
 use guion::widget::as_widget::{AsWidget};
@@ -31,13 +29,14 @@ impl Env for ExampleEnv {
     type Context<'a> = ExampleCtx<'a>;
     type RootRef<'a> = &'a Windows<Self>;
     type RootMut<'a> = &'a mut Windows<Self>;
-    type WidgetID = StdID;
-    type WidgetPath = ExamplePath;
     type ValidState = ExampleValidState;
     type Message = Box<dyn Any>;
     type Error = GuionError<ExampleEnv>;
     type Phantom = std::convert::Infallible;
-    type EventDowncastMap = /*();*/StupidEventDowncastMap;
+    type EventDowncastMap = 
+        // ()
+        StupidEventDowncastMap
+    ;
 }
 
 impl Backend<ExampleEnv> for ExampleBackend {
@@ -47,8 +46,6 @@ impl Backend<ExampleEnv> for ExampleBackend {
     type Size = StdGonstraints;
     type TextLayout = Glyphs;
 }
-
-pub type ExamplePath = SimplePath<ExampleEnv,StdID>;
 
 //TODO move this to guion
 #[derive(Clone)]
