@@ -95,7 +95,7 @@ impl<'g,E> RootRef<E> for &'g Windows<E> where for<'a,'b> E: Env<RootRef<'a>=&'a
     }
 }
 impl<'g,E> RootMut<E> for &'g mut Windows<E> where for<'a,'b> E: Env<RootRef<'a>=&'a Windows<E>,RootMut<'b>=&'b mut Windows<E>> {
-    fn fork<'s>(&'s mut self) -> <E as Env>::RootMut<'s> where Self: 's {
+    fn fork_mut<'s>(&'s mut self) -> <E as Env>::RootMut<'s> where Self: 's {
         self
     }
 }

@@ -2,7 +2,7 @@ use druid_shell::piet::Piet;
 use guion::backend::Backend;
 use guion::env::Env;
 use guion::event::standard::dyn_evt::DynEvent;
-use guion::layout::StdGonstraints;
+use guion::layout::size::StdGonstraints;
 use guion::util::AsRefMut;
 use guion::util::error::GuionError;
 use guion::widget::as_widget::{AsWidget};

@@ -1,102 +1,75 @@
 use druid_shell::kurbo::Size;
-use guion::text::stor::TextStor;
-use guion::text::stor::TextStorMut;
-use guion::util::sma::SMA;
-use guion::widget::as_widget::{AsWidget, AsWidgetMut};
-use guion::widget::resolvable::{Resolvable, ResolvableMut};
+use guion::env::Env;
+use guion::view::DynViewDispatch;
+use guion::view::View;
+use guion::view::mut_target::MStatic;
+use guion::view::mutor_trait::MutorToBuilderDyn;
+use guion::widget::Widget;
+use guion::widget::as_widgets::fixed_idx::WidgetsFixedIdx;
+use guion::widget::cache::DynWidgetCache;
 use guion::widgets::label::Label;
 use guion::widgets::textbox::TextBox;
-use guion::{const_std_id};
 use guion::layout::Orientation;
 use guion::widgets::pane::Pane;
+use guion::widgets::textbox::state::TextBoxMeta;
 use guion_druid_shell::app::ArcApp;
 use guion_druid_shell::example::ctx::ExampleCtx;
 use guion_druid_shell::example::env::ExampleEnv;
 
 pub struct Model {
     celsius: String,
+    celsius_meta: TextBoxMeta<ExampleEnv>,
     fahrenheit: String,
+    fahrenheit_meta: TextBoxMeta<ExampleEnv>,
 }
 
-const_std_id!(PaneID TextC LabelC LabelF TextF);
+impl View<ExampleEnv> for Model {
+    type WidgetCache = DynWidgetCache<ExampleEnv>;
+    type Mutarget = MStatic<Self>;
 
-impl AsWidget<ExampleEnv> for Model {
-    fn as_ref(&self) -> Resolvable<ExampleEnv> {
-        Resolvable::<'_,ExampleEnv>::from_widget(
-            Pane::new(
-                PaneID(),
-                Orientation::Horizontal,
-                (
-                    TextBox::immediate(TextC(), &self.celsius),
-                    Label::immediate(LabelC(), "Celsius = "),
-                    TextBox::immediate(TextF(), &self.fahrenheit),
-                    Label::immediate(LabelF(), "Fahrenheit"),
-                ),
-            )
-        )
-    }
-    fn into_ref<'w>(self) -> Resolvable<'w,ExampleEnv> where Self: 'w {
-        unimplemented!()
-    }
-}
-impl AsWidgetMut<ExampleEnv> for Model {
-    fn as_mut(&mut self) -> guion::widget::resolvable::ResolvableMut<ExampleEnv> {
-        // Shared Mutable Access for tree and closures
-        let sma = SMA::new(self);
+    fn view<R>(&self, dispatch: DynViewDispatch<'_,R,ExampleEnv>, mutor: &(dyn MutorToBuilderDyn<(),Self::Mutarget,ExampleEnv>+'_), root: <ExampleEnv as Env>::RootRef<'_>, ctx: &mut <ExampleEnv as Env>::Context<'_>) -> R {
+        let widget = Pane::<ExampleEnv,_>::new(
+            Orientation::Horizontal,
+            WidgetsFixedIdx((
+                TextBox::of_text(&self.celsius)
+                    .with_meta(&self.celsius_meta)
+                    .with_update_if(mutor, (), |s,_,update,_|{
+                        update.apply_to_text(&mut s.celsius);
+                        update.apply_to_meta(&mut s.celsius_meta);
+                        if let Ok(v) = s.celsius.trim().parse::<i64>() {
+                            s.fahrenheit = ((v*9/5)+32).to_string();
+                        }
+                    }),
+                Label::of_text("Celsius = "),
+                TextBox::of_text(&self.fahrenheit)
+                    .with_meta(&self.fahrenheit_meta)
+                    .with_update_if(mutor, (), |s,_,update,_|{
+                        update.apply_to_text(&mut s.fahrenheit);
+                        update.apply_to_meta(&mut s.fahrenheit_meta);
+                        if let Ok(v) = s.fahrenheit.trim().parse::<i64>() {
+                            s.celsius = ((v-32)*5/9).to_string();
+                        }
+                    }),
+                Label::of_text("Fahrenheit"),
+            )),
+        );
 
-        let sma_celsius = sma.fork_with_lens(|model| &mut model.celsius );
-        let sma_fahrenheit = sma.fork_with_lens(|model| &mut model.fahrenheit );
-
-        let sma_a = sma.fork();
-        let sma_b = sma.fork();
-
-        ResolvableMut::<'_,ExampleEnv>::from_widget(
-            Pane::new(
-                PaneID(),
-                Orientation::Horizontal,
-                (
-                    TextBox::immediate(
-                        TextC(),
-                        sma_celsius
-                        .on_modification(move |_| {
-                            let model = &mut *sma_a.borrow_mut();
-                            if let Ok(v) = model.celsius.trim().parse::<i64>() {
-                                model.fahrenheit = ((v*9/5)+32).to_string();
-                            }
-                        })
-                    ),
-                    Label::immediate(LabelC(), "".immutable()),
-                    TextBox::immediate(
-                        TextF(),
-                        sma_fahrenheit
-                        .on_modification(move |_| {
-                            let model = &mut *sma_b.borrow_mut();
-                            if let Ok(v) = model.fahrenheit.trim().parse::<i64>() {
-                                model.celsius = ((v-32)*5/9).to_string();
-                            }
-                        })
-                    ),
-                    Label::immediate(LabelF(), "".immutable()),
-                ),
-            )
-        )
-    }
-    fn into_mut<'w>(self) -> guion::widget::resolvable::ResolvableMut<'w,ExampleEnv> where Self: 'w {
-        unimplemented!()
+        (dispatch)(widget.erase(), root, ctx)
     }
 }
-
 fn main() {
     let app = ArcApp::<ExampleEnv>::new(ExampleCtx::new());
 
     app.add_window(
         |w| {
-            w.set_title("7gui2");
+            w.set_title("7GUIs 02 Temperature");
             w.set_size(Size::new(512.0, 32.0));
         },
         Model{
             celsius: "0".to_owned(),
+            celsius_meta: Default::default(),
             fahrenheit: "0".to_owned(),
+            fahrenheit_meta: Default::default(),
         },
     );
 

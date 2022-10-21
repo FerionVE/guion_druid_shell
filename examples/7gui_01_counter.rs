@@ -1,12 +1,16 @@
+#![feature(type_alias_impl_trait)]
 //! MVC-style 7gui example to increment counter
 
 use guion::env::Env;
-use guion::text::stor::TextStor;
-use guion::widget::as_widget::{AsWidget, AsWidgetMut};
-use guion::widget::resolvable::{Resolvable, ResolvableMut};
+use guion::view::{View, DynViewDispatch};
+use guion::view::mut_target::MStatic;
+use guion::view::mutor_trait::{MutorToBuilderDyn};
+use guion::widget::Widget;
+use guion::widget::as_widgets::fixed_idx::WidgetsFixedIdx;
+use guion::widget::cache::DynWidgetCache;
 use guion::widgets::button::Button;
 use guion::widgets::label::Label;
-use guion::{const_std_id, constraint};
+use guion::constraint;
 use guion::layout::Orientation;
 use guion::widgets::pane::Pane;
 use guion_druid_shell::app::ArcApp;
@@ -18,68 +22,38 @@ pub struct Model {
     count: u32,
 }
 
-// Define some persistent WidgetIDs
-const_std_id!(RootE PaneID LabelID ButtonID ButtonLabelID);
-
 // Immutable immediate view, rendering and layouting done here
-impl AsWidget<ExampleEnv> for Model {
-    fn as_ref(&self) -> Resolvable<ExampleEnv> {
-        Resolvable::<'_,ExampleEnv>::from_widget(
-            Pane::new(
-                PaneID(),
-                Orientation::Horizontal,
-                (
-                    Label::immediate(LabelID(),self.count)
-                        .with_size(constraint!(~0-@2.0|24)),
-                    Button::immediate(ButtonID(),Label::immediate(ButtonLabelID(),"Increment")),
-                ),
-            )
-        )
-    }
-    fn into_ref<'w>(self) -> Resolvable<'w,ExampleEnv> where Self: 'w {
-        unimplemented!()
-    }
-}
-// Mutable immediate view for state mutation and controller, identical Widget tree to immutable view
-impl AsWidgetMut<ExampleEnv> for Model {
-    fn as_mut(&mut self) -> guion::widget::resolvable::ResolvableMut<ExampleEnv> {
-        let count = self.count;
-        
-        // Closure to increment count
-        let increment = trig(move |_| self.count += 1);
+impl View<ExampleEnv> for Model {
+    type WidgetCache = DynWidgetCache<ExampleEnv>;
+    type Mutarget = MStatic<Model>;
 
-        ResolvableMut::<'_,ExampleEnv>::from_widget(
-            Pane::new(
-                PaneID(),
-                Orientation::Horizontal,
-                (
-                    Label::immediate(LabelID(),count.immutable()),
-                    Button::immediate(ButtonID(),Label::immediate(ButtonLabelID(),"Increment".to_owned()))
-                        .with_trigger_mut(increment), // Pass closure to Button trigger
-                ),
-            )
-        )
-    }
-    fn into_mut<'w>(self) -> guion::widget::resolvable::ResolvableMut<'w,ExampleEnv> where Self: 'w {
-        unimplemented!()
+    fn view<R>(&self, dispatch: DynViewDispatch<'_,R,ExampleEnv>, mutor: &(dyn MutorToBuilderDyn<(),Self::Mutarget,ExampleEnv>+'_), root: <ExampleEnv as Env>::RootRef<'_>, ctx: &mut <ExampleEnv as Env>::Context<'_>) -> R
+    {
+        let widget = Pane::<ExampleEnv,_>::new(
+            Orientation::Horizontal,
+            WidgetsFixedIdx((
+                Label::of_text(self.count)
+                    .with_size(constraint!(~0-@2.0|24)),
+                Button::of_text(Label::of_text("Increment"))
+                    //.with_trigger_mut(mutor.mutor_end_if((), |s,_,_,_| s.count += 1 ))
+                    .with_trigger_mut_if(mutor, (), |s,_,_,_| s.count += 1 ),
+            )),
+        );
+
+        (dispatch)(widget.erase(), root, ctx)
     }
 }
 
 fn main() {
     let app = ArcApp::<ExampleEnv>::new(ExampleCtx::new());
 
-    app.add_window(
+    app.add_window::<Model,_>(
         |window| {
-            window.set_title("7gui1")
+            window.set_title("7GUIs 01 Counter")
         },
         Model{count:0},
     );
 
     //while app.do_events() {}
     app.run();
-}
-
-/// required to correctly infer closure type
-fn trig<E,F>(f: F) -> F where E: Env, F: for<'a,'b> FnMut(&'a mut E::Context<'b>) {
-    f
 }

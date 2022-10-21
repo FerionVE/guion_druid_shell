@@ -17,7 +17,7 @@ use guion::widget::stack::{WithCurrentBounds};
 
 use crate::render::Render;
 use crate::style::cursor::IntoGuionDruidShellCursor;
-use crate::style::{stupid_test_style_variants, stupid_test_style};
+use crate::style::stupid_test_style;
 
 use super::{ArcApp, ksize2dims};
 use super::windows::Windows;
@@ -52,8 +52,7 @@ for<'a,'b> E: Env<RootRef<'a>=&'a Windows<E>,RootMut<'b>=&'b mut Windows<E>>,
             (dims.width as u32, dims.height as u32),
         );
 
-        let test_style = stupid_test_style_variants();
-        let test_style = stupid_test_style(&test_style);
+        let test_style = stupid_test_style();
         let props = WithTestStyle((),test_style);
         let props = WithCurrentBounds {
             inner: props,

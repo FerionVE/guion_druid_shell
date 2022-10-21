@@ -5,7 +5,7 @@ use crate::style::font::Glyphs;
 use guion::aliases::ESColor;
 use guion::env::Env;
 use guion::render::TestStyle;
-use guion::render::TestStyleType;
+use guion::render::TestStyleV1;
 use guion::render::TestStyleVariant;
 use guion::render::WithTestStyle;
 use guion::style::color::Color as GColor;
@@ -59,6 +59,10 @@ impl<E> guion::style::Style<E> for Style where
     fn and(&self, s: &Self) -> Self {
         self.clone() //TODO
     }
+
+    // fn choose_font(css_font_desc: &str) -> Self {
+    //     todo!()
+    // }
 }
 
 impl AsRefMut<Self> for Style {
@@ -97,39 +101,19 @@ pub fn stupid_colors<E>(v: SelectorFilled<E>) -> [u8;4] where E: Env {
     }
 }
 
-pub fn stupid_test_style_variants<E>() -> [TestStyleVariant<E>;5] where E: Env {
-    [
-        TestStyleVariant {
-            fg_color: ESColor::<E>::from_rgba8([64,64,64,255]),
-            border_color: ESColor::<E>::from_rgba8([0,255,0,255]),
-        },
-        TestStyleVariant {
-            fg_color: ESColor::<E>::from_rgba8([64,128,64,255]),
-            border_color: ESColor::<E>::from_rgba8([0,255,0,255]),
-        },
-        TestStyleVariant {
-            fg_color: ESColor::<E>::from_rgba8([64,128,64,255]),
-            border_color: ESColor::<E>::from_rgba8([255,127,0,255]),
-        },
-        TestStyleVariant {
-            fg_color: ESColor::<E>::from_rgba8([0,192,0,255]),
-            border_color: ESColor::<E>::from_rgba8([0,0,0,255]),
-        },
-        TestStyleVariant {
-            fg_color: ESColor::<E>::from_rgba8([64,64,64,255]),
-            border_color: ESColor::<E>::from_rgba8([128,128,128,255]),
-        }
-    ]
-}
-
-pub fn stupid_test_style<'a,E>(variants: &'a [TestStyleVariant<E>;5]) -> TestStyle<'a,E> where E: Env {
-    TestStyle {
-        default_variant: &variants[0],
-        hovered_variant: &variants[1],
-        selected_variant: &variants[2],
-        activated_variant: &variants[3],
-        disabled_variant: &variants[4],
-        variant_type: TestStyleType::Default,
+pub fn stupid_test_style<E>() -> TestStyle<E> where E: Env {
+    TestStyleV1 {
+        default_border_color: ESColor::<E>::from_rgba8([0,255,0,255]),
+        default_fg_color: ESColor::<E>::from_rgba8([64,64,64,255]),
+        disabled_border_color: ESColor::<E>::from_rgba8([128,128,128,255]),
+        disabled_fg_color: ESColor::<E>::from_rgba8([64,64,64,255]),
+        hovered_border_color: None,
+        hovered_fg_color: Some(ESColor::<E>::from_rgba8([64,128,64,255])),
+        selected_border_color: Some(ESColor::<E>::from_rgba8([255,127,0,255])),
+        selected_fg_color: None,
+        activated_border_color: Some(ESColor::<E>::from_rgba8([0,0,0,255])),
+        activated_fg_color: Some(ESColor::<E>::from_rgba8([0,192,0,255])),
+        current_variant: Default::default(),
         bg_color: ESColor::<E>::from_rgba8([32,32,32,255]),
         text_color: ESColor::<E>::from_rgba8([255,255,255,255]),
         component_border: Border::uniform(1),
@@ -137,5 +121,5 @@ pub fn stupid_test_style<'a,E>(variants: &'a [TestStyleVariant<E>;5]) -> TestSty
         cursor: StdCursor::Default.into(),
         color_type: guion::render::TestStyleColorType::Bg,
         border_type: guion::render::TestStyleBorderType::Spacing,
-    }
+    }.into()
 }

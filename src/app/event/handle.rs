@@ -17,7 +17,7 @@ use crate::app::{App, ArcApp};
 use crate::app::windows::Windows;
 use crate::event::key::Key;
 use crate::style::font::ksize2dims;
-use crate::style::{stupid_test_style_variants, stupid_test_style};
+use crate::style::stupid_test_style;
 
 use super::BaseEvent;
 
@@ -194,8 +194,7 @@ impl<E> App<E> where
     // }
 
     fn send_legacy_root_event<V>(&mut self, window_id: usize, event: StdVariant<V,E>) -> bool where V: Variant<E> + Clone {
-        let test_style = stupid_test_style_variants::<E>();
-        let test_style = stupid_test_style(&test_style);
+        let test_style = stupid_test_style::<E>();
         let props = WithTestStyle((),test_style);
         
         // TODO where do we inject inital window bounds?
