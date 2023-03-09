@@ -6,14 +6,20 @@ use guion::env::Env;
 use guion::event::imp::StdVarSup;
 use guion::event::variant::Variant;
 use guion::event_new::variants::StdVariant;
-use guion::handler::Handler;
+use guion::intercept::WidgetIntercept;
+use guion::invalidation::Invalidation;
+use guion::layout::Gonstraints;
+use guion::newpath::{FixedIdx, PathFragment};
 use guion::render::WithTestStyle;
 use guion::util::AsRefMut;
 use guion::event::Event as GEvent;
 use guion::event::standard::variants::RootEvent;
 use guion::util::bounds::{Bounds, Offset};
+use guion::widget::Widget;
+use guion::widget::cache::WidgetCache;
+use guion::widget::stack::WithCurrentBounds;
 
-use crate::app::{App, ArcApp};
+use crate::app::{App, ArcApp, dims2ksize, ModelRoot};
 use crate::app::windows::Windows;
 use crate::event::key::Key;
 use crate::style::font::ksize2dims;
@@ -22,7 +28,7 @@ use crate::style::stupid_test_style;
 use super::BaseEvent;
 
 impl<E> ArcApp<E> where
-    for<'a,'b> E: Env<RootRef<'a>=&'a Windows<E>,RootMut<'b>=&'b mut Windows<E>>,
+    for<'a,'b> E: Env<RootRef<'a>=&'a ModelRoot,RootMut<'b>=&'b mut ModelRoot>,
     for<'a> ECQueue<'a,E>: AsRefMut<crate::ctx::queue::Queue<E>>,
     EEvent<E>: StdVarSup<E>,
     EEKey<E>: From<Key>,
@@ -57,13 +63,26 @@ impl<E> ArcApp<E> where
         s.do_queued(StdOrder::PreEvents);
         s.do_queued(StdOrder::PreEvent);
 
-        let mut handled= false;
+        let mut vali = Invalidation::valid();
+        let mut handled = false;
+
         match event {
             BaseEvent::Size(size) => {
-                let e = StdVariant::new(RootEvent::WindowResize{
-                    size: ksize2dims(size),
-                },ts);
-                handled |= s.send_legacy_root_event(window_id,e);
+                let min_size = s.size_constraints(window_id).min_dims();
+
+                if s.windows.windows[window_id].dims.w < min_size.w || s.windows.windows[window_id].dims.h < min_size.h {
+                    if let Some(handle) = s.windows.windows[window_id].handle.as_ref() {
+                        handle.set_size(dims2ksize(min_size));
+                        handled = true;
+                    }
+                }
+
+                if !handled {
+                    let e = StdVariant::new(RootEvent::WindowResize{
+                        size: ksize2dims(size),
+                    },ts);
+                    vali |= s.send_legacy_root_event(window_id,e);
+                }
             }
             BaseEvent::Scale(_) => {
                 //handled = todo!();
@@ -82,14 +101,14 @@ impl<E> ArcApp<E> where
                     key: Key::Kbd(key.key.clone(),key.location).into()
                 },ts);
                 eprintln!("KeyDown: {:?}",e);
-                handled |= s.send_legacy_root_event(window_id,e);
+                vali |= s.send_legacy_root_event(window_id,e);
                 if let druid_shell::keyboard_types::Key::Character(c) = key.key {
                     //TODO do we have to timer-simulate ongoing keypress?
                     let e = StdVariant::new(RootEvent::TextInput{
                         text: c,
                     },ts);
                     eprintln!("KeyDownTI: {:?}",e);
-                    handled |= s.send_legacy_root_event(window_id,e);
+                    vali |= s.send_legacy_root_event(window_id,e);
                 }
             }
             BaseEvent::KeyUp(key) => {
@@ -97,7 +116,7 @@ impl<E> ArcApp<E> where
                     key: Key::Kbd(key.key,key.location).into()
                 },ts);
                 eprintln!("KeyUp: {:?}",e);
-                handled = s.send_legacy_root_event(window_id,e);
+                vali = s.send_legacy_root_event(window_id,e);
             }
             BaseEvent::Wheel(m) => {
                 let e = StdVariant::new(RootEvent::MouseScroll{
@@ -105,7 +124,7 @@ impl<E> ArcApp<E> where
                     y: m.wheel_delta.y as i32,
                 },ts);
                 eprintln!("Wheel: {:?}",e);
-                handled |= s.send_legacy_root_event(window_id,e); //TODO event didn't have bounds filter, but maybe it needs?
+                vali |= s.send_legacy_root_event(window_id,e); //TODO event didn't have bounds filter, but maybe it needs?
             }
             BaseEvent::Zoom(_) => {
                 //handled = todo!();
@@ -116,25 +135,25 @@ impl<E> ArcApp<E> where
                     pos
                 },ts).with_filter_point(pos); // TODO StdHandler currently doesn't keep the filter
                 eprintln!("MouseMove: {:?}",e);
-                handled |= s.send_legacy_root_event(window_id,e);
+                vali |= s.send_legacy_root_event(window_id,e);
             }
             BaseEvent::MouseDown(m) => {
                 let e = StdVariant::new(RootEvent::MouseDown{
                     key: Key::Mouse(m.button).into()
                 },ts);
                 eprintln!("MouseDown: {:?}",e);
-                handled |= s.send_legacy_root_event(window_id,e); //TODO technically it had pos! in old guion, but StdHandler currently doesn't keep the filter. Maybe change this
+                vali |= s.send_legacy_root_event(window_id,e); //TODO technically it had pos! in old guion, but StdHandler currently doesn't keep the filter. Maybe change this
             }
             BaseEvent::MouseUp(m) => {
                 let e = StdVariant::new(RootEvent::MouseUp{
                     key: Key::Mouse(m.button).into()
                 },ts);
                 eprintln!("MouseUp: {:?}",e);
-                handled |= s.send_legacy_root_event(window_id,e); //TODO technically it had pos! in old guion, but StdHandler currently doesn't keep the filter. Maybe change this
+                vali |= s.send_legacy_root_event(window_id,e); //TODO technically it had pos! in old guion, but StdHandler currently doesn't keep the filter. Maybe change this
             }
             BaseEvent::MouseLeave => {
                 let e = StdVariant::new(RootEvent::MouseLeaveWindow{},ts);
-                handled |= s.send_legacy_root_event(window_id,e);
+                vali |= s.send_legacy_root_event(window_id,e);
             }
             BaseEvent::Timer(_) => {
                 //handled = todo!();
@@ -160,19 +179,22 @@ impl<E> ArcApp<E> where
         }
 
         s.do_queued(StdOrder::PostCurrent);
+        s.do_queued(StdOrder::PostCurrent);
         s.do_queued(StdOrder::PostEvent);
         s.do_queued(StdOrder::PostEvents);
         
         if let Some(handle) = &s.windows.windows[window_id].handle {
-            handle.invalidate();
+            if s.windows.windows[window_id].vali.render {
+                handle.invalidate();
+            }
         }
 
-        handled
+        true
     }
 }
 
 impl<E> App<E> where
-    for<'a,'b> E: Env<RootRef<'a>=&'a Windows<E>,RootMut<'b>=&'b mut Windows<E>>,
+    for<'a,'b> E: Env<RootRef<'a>=&'a ModelRoot,RootMut<'b>=&'b mut ModelRoot>,
     for<'a> ECQueue<'a,E>: AsRefMut<crate::ctx::queue::Queue<E>>,
     EEvent<E>: StdVarSup<E>,
     EEKey<E>: From<Key>,
@@ -193,7 +215,7 @@ impl<E> App<E> where
     //     link._event_root(&e)
     // }
 
-    fn send_legacy_root_event<V>(&mut self, window_id: usize, event: StdVariant<V,E>) -> bool where V: Variant<E> + Clone {
+    fn send_legacy_root_event<V>(&mut self, window_id: usize, event: StdVariant<V,E>) -> Invalidation where V: Variant<E> + Clone {
         let test_style = stupid_test_style::<E>();
         let props = WithTestStyle((),test_style);
         
@@ -201,18 +223,52 @@ impl<E> App<E> where
 
         let window_path = self.windows.path_of_window(window_id,&mut self.ctx);
 
-        let ghandler = self.ctx.build_handler();
+        let ghandler = self.ctx.build_intercept();
 
         ghandler._event_root(
-            &self.windows,
+            &mut self.windows,
             &(),
             &props,
             &event,
             Some(&window_path),
-            &mut self.caches,
-            &self.windows,
+            &self.models,
             &mut self.ctx,
         )
+    }
+
+    fn size_constraints(&mut self, window_id: usize) -> ESize<E> {
+        let test_style = stupid_test_style::<E>();
+        let props = WithTestStyle((),test_style);
+
+        let hack_dims = Bounds::from_size(self.windows.windows[window_id].dims);
+
+        let props = WithCurrentBounds {
+            inner: props,
+            bounds: hack_dims,
+            viewport: hack_dims,
+        };
+        
+        // TODO where do we inject inital window bounds?
+
+        let window_path = self.windows.path_of_window(window_id,&mut self.ctx);
+
+        self.windows.with_window_by_path_mut(
+            &window_path,
+            #[inline] |widget, idx, ctx| {
+                assert_eq!(window_id, idx);
+                
+                let widget = widget.expect("Lost Widget in render");
+
+                //self.caches.cache[idx].reset_current();
+
+                let path = FixedIdx(idx as isize).push_on_stack(());
+                
+                widget.size(&path, &props, &self.models, ctx)
+            },
+            &mut self.ctx
+        )
+
+        //self.windows.windows[window_id].vali.layout = false;
     }
 }
 

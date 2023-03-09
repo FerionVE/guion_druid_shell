@@ -5,10 +5,10 @@ use guion::event::standard::dyn_evt::DynEvent;
 use guion::layout::size::StdGonstraints;
 use guion::util::AsRefMut;
 use guion::util::error::GuionError;
-use guion::widget::as_widget::{AsWidget};
 use std::any::Any;
 use std::fmt::Debug;
 
+use crate::app::ModelRoot;
 use crate::app::windows::Windows;
 use crate::event::key::Key;
 use crate::render::Render;
@@ -27,8 +27,8 @@ pub struct ExampleBackend;
 impl Env for ExampleEnv {
     type Backend = ExampleBackend;
     type Context<'a> = ExampleCtx<'a>;
-    type RootRef<'a> = &'a Windows<Self>;
-    type RootMut<'a> = &'a mut Windows<Self>;
+    type RootRef<'a> = &'a ModelRoot;
+    type RootMut<'a> = &'a mut ModelRoot;
     type ValidState = ExampleValidState;
     type Message = Box<dyn Any>;
     type Error = GuionError<ExampleEnv>;
@@ -37,6 +37,8 @@ impl Env for ExampleEnv {
         // ()
         StupidEventDowncastMap
     ;
+    type WidgetRoot = Windows<Self>;
+    type CtxTCellOwner = (); //TODO
 }
 
 impl Backend<ExampleEnv> for ExampleBackend {

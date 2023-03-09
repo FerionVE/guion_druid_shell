@@ -10,6 +10,9 @@ use guion::render::TestStyleVariant;
 use guion::render::WithTestStyle;
 use guion::style::color::Color as GColor;
 use guion::style::standard::cursor::StdCursor;
+use guion::text::layout::TxtLayout;
+use guion::text::stor::TextStor;
+use guion::text::stor::ToTextLayout;
 use guion::util::AsRefMut;
 use guion::util::border::Border;
 use self::selector::*;
@@ -111,8 +114,10 @@ pub fn stupid_test_style<E>() -> TestStyle<E> where E: Env {
         hovered_fg_color: Some(ESColor::<E>::from_rgba8([64,128,64,255])),
         selected_border_color: Some(ESColor::<E>::from_rgba8([255,127,0,255])),
         selected_fg_color: None,
-        activated_border_color: Some(ESColor::<E>::from_rgba8([0,0,0,255])),
+        activated_border_color: None,
         activated_fg_color: Some(ESColor::<E>::from_rgba8([0,192,0,255])),
+        pressed_border_color: Some(ESColor::<E>::from_rgba8([0,0,0,255])),
+        pressed_fg_color: Some(ESColor::<E>::from_rgba8([0,192,0,255])),
         current_variant: Default::default(),
         bg_color: ESColor::<E>::from_rgba8([32,32,32,255]),
         text_color: ESColor::<E>::from_rgba8([255,255,255,255]),

@@ -6,7 +6,6 @@ use druid_shell::piet::TextLayoutBuilder;
 use guion::text::cursel::{Direction, TxtCurSel};
 use guion::text::layout::{TxtLayout, TxtLayoutFromStor};
 use guion::text::stor::{TextStor, ToTextLayout};
-use guion::validation::validated::Validated;
 use render::rect2bounds;
 use guion::util::bounds::{Bounds, Offset};
 use guion::util::{bounds::Dims};
@@ -71,6 +70,14 @@ impl<E> TxtLayout<E> for Glyphs where E: Env {
         self.text.rects_for_range(s).into_iter()
             .map(rect2bounds)
             .collect()
+    }
+
+    fn select_range(&self, range: Range<u32>, mut s: Self::CurSel) -> Self::CurSel {
+        TxtLayout::<E>::fix_cursor_boundaries(self,&mut s);
+        s.select = range.start;
+        s.caret = range.end;
+        TxtLayout::<E>::fix_cursor_boundaries(self,&mut s);
+        s
     }
 
     // fn coord_of(&self, i: u32) -> Option<(u32,u32)> {

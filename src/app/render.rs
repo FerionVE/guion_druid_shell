@@ -19,12 +19,12 @@ use crate::render::Render;
 use crate::style::cursor::IntoGuionDruidShellCursor;
 use crate::style::stupid_test_style;
 
-use super::{ArcApp, ksize2dims};
+use super::{ArcApp, ksize2dims, ModelRoot};
 use super::windows::Windows;
 
 
 impl<E> ArcApp<E> where
-for<'a,'b> E: Env<RootRef<'a>=&'a Windows<E>,RootMut<'b>=&'b mut Windows<E>>,
+for<'a,'b> E: Env<RootRef<'a>=&'a ModelRoot,RootMut<'b>=&'b mut ModelRoot>,
     //for<'a> ERenderer<'a,E>: RenderStdWidgets<E>,
     for<'a> E::Backend: Backend<E,Renderer<'a>=Render<'a,E>>,
     for<'a> Render<'a,E>: RenderStdWidgets<E>,
@@ -36,9 +36,15 @@ for<'a,'b> E: Env<RootRef<'a>=&'a Windows<E>,RootMut<'b>=&'b mut Windows<E>>,
         //todo!()
     }
     pub(crate) fn render(&self, window_id: usize, render: &mut Piet, invalid_region: &druid_shell::Region) {
+        eprintln!("Render {:?}",invalid_region);
+
         let mut s = self.inner.lock().unwrap();
         let s = &mut *s;
         let mut window_handle = s.windows.windows[window_id].handle.as_ref().unwrap().clone();
+
+        if !s.windows.windows[window_id].vali.render {return;}
+
+        eprintln!("real render");
 
         let path = s.windows.path_of_window(window_id,&mut s.ctx);
         let dims = window_handle.get_size();
@@ -72,20 +78,22 @@ for<'a,'b> E: Env<RootRef<'a>=&'a Windows<E>,RootMut<'b>=&'b mut Windows<E>>,
 
         let force = render.force;
 
-        let root: E::RootRef<'_> = &s.windows;
-        root.with_window_by_path(
+        let root: E::RootRef<'_> = &s.models;
+        s.windows.with_window_by_path_mut(
             &path,
             #[inline] |widget, idx, ctx| {
                 let widget = widget.expect("Lost Widget in render");
 
-                s.caches.cache[idx].reset_current();
+                //s.caches.cache[idx].reset_current();
 
-                let path = FixedIdx(idx).push_on_stack(());
-
+                let path = FixedIdx(idx as isize).push_on_stack(());
+                
                 widget.render(&path, &props, &mut render, force, &mut s.caches.cache[idx], root, ctx);
             },
             &mut s.ctx
         );
+
+        s.windows.windows[window_id].vali.render = false;
 
         s.ctx.queue_mut().as_mut().force_render = false;
 

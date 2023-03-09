@@ -105,7 +105,7 @@ pub(crate) fn offset2point(o: Offset) -> Point {
 }
 
 pub(crate) fn color2color(c: impl guion::style::color::Color) -> piet::Color {
-    let [r,g,b,a] = c.into_rgba8();
+    let [r,g,b,a] = c.to_rgba8();
     piet::Color::rgba8(r,g,b,a)
 }
 
@@ -117,4 +117,8 @@ impl<'s,E> AsRefMut<Render<'s,E>> for Render<'s,E> where E: Env {
     fn as_mut(&mut self) -> &mut Render<'s,E> {
         self
     }
+}
+
+pub fn kursize(w: f64, h: f64) -> druid_shell::kurbo::Size {
+    druid_shell::kurbo::Size::new(w,h)
 }

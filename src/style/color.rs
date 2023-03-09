@@ -10,7 +10,7 @@ impl guion::style::color::Color for Color {
         Self(DSColor::rgba8(c[0], c[1], c[2], c[3]))
     }
     #[inline]
-    fn into_rgba8(&self) -> [u8;4] {
+    fn to_rgba8(&self) -> [u8;4] {
         let (r,g,b,a) = self.0.as_rgba8();
         [r,g,b,a]
     }

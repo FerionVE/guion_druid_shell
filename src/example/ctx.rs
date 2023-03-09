@@ -1,13 +1,14 @@
 use guion::ctx::Context;
 use guion::ctx::clipboard::CtxClipboardAccess;
 use guion::env::Env;
-use guion::handler::HandlerBuilder;
-use guion::handler::standard::StdHandler;
+use guion::intercept::{InterceptBuilder, InterceptStateResolve};
+use guion::intercept::standard::StdIntercept;
 use guion::state::CtxStdState;
 use guion::util::AsRefMut;
+use guion::widget::id::WidgetID;
 use std::collections::HashMap;
 use std::marker::PhantomData;
-use std::sync::Arc;
+use std::num::NonZeroUsize;
 
 use crate::ctx::queue::Queue;
 use crate::ctx::state::DSState;
@@ -15,27 +16,29 @@ use crate::ctx::state::DSState;
 use super::env::ExampleEnv;
 
 pub struct ExampleCtx<'cc> {
-    pub handler: ExampleHandler,
+    pub handler: ExampleIntercept,
     pub ds_state: DSState,
     pub queue: Queue<ExampleEnv>,
+    pub id_counter: usize,
     test: PhantomData<&'cc mut u32>,
 }
 
 impl<'cc> ExampleCtx<'cc> {
     pub fn new() -> Self {
         Self {
-            handler: StdHandler::<(),ExampleEnv>::new(()),
+            handler: StdIntercept::<(),ExampleEnv>::new(()),
             ds_state: DSState::new(),
             queue: Queue{queues:HashMap::new(),force_render:true},
+            id_counter: 255,
             test: PhantomData,
         }
     }
 }
 
-pub type ExampleHandler = StdHandler<(),ExampleEnv>;
+pub type ExampleIntercept = StdIntercept<(),ExampleEnv>;
 
 impl<'cc> Context<'cc,ExampleEnv> for ExampleCtx<'cc> {
-    type Handler = ExampleHandler;
+    type Intercept = ExampleIntercept;
     type Queue = Queue<ExampleEnv>;
 
     #[inline]
@@ -51,8 +54,21 @@ impl<'cc> Context<'cc,ExampleEnv> for ExampleCtx<'cc> {
         self
     }
 
-    fn build_handler(&mut self) -> <Self::Handler as guion::handler::HandlerBuilder<ExampleEnv>>::Built where Self: Sized {
-        <ExampleHandler as HandlerBuilder<ExampleEnv>>::build(Arc::new(move |c| &mut c.handler ),self)
+    fn build_intercept(&mut self) -> <Self::Intercept as InterceptBuilder<ExampleEnv>>::Built where Self: Sized {
+        <ExampleIntercept as InterceptBuilder<ExampleEnv>>::build::<ExampleInterceptResolve>(self)
+    }
+
+    fn retained_id(&mut self) -> WidgetID {
+        self.id_counter += 1;
+        WidgetID(NonZeroUsize::new(self.id_counter).unwrap())
+    }
+
+    fn tcell_owner(&self) -> &guion::qcell::TCellOwner<<ExampleEnv as Env>::CtxTCellOwner> {
+        todo!()
+    }
+
+    fn tcell_owner_mut(&mut self) -> &mut guion::qcell::TCellOwner<<ExampleEnv as Env>::CtxTCellOwner> {
+        todo!()
     }
 }
 
@@ -66,13 +82,13 @@ impl AsRefMut<Self> for ExampleCtx<'_> {
         self
     }
 }
-impl AsRefMut<StdHandler<(),ExampleEnv>> for ExampleCtx<'_> {
+impl AsRefMut<StdIntercept<(),ExampleEnv>> for ExampleCtx<'_> {
     #[inline]
-    fn as_ref(&self) -> &ExampleHandler {
+    fn as_ref(&self) -> &ExampleIntercept {
         &self.handler
     }
     #[inline]
-    fn as_mut(&mut self) -> &mut ExampleHandler {
+    fn as_mut(&mut self) -> &mut ExampleIntercept {
         &mut self.handler
     }
 }
@@ -87,7 +103,7 @@ impl AsRefMut<DSState> for ExampleCtx<'_> {
     }
 }
 impl<'cc> CtxStdState<'cc,ExampleEnv> for ExampleCtx<'cc> {
-    type T = ExampleHandler;
+    type T = ExampleIntercept;
     #[inline]
     fn state_mut(&mut self) -> &mut Self::T {
         &mut self.handler
@@ -135,5 +151,14 @@ impl CtxClipboardAccess<ExampleEnv> for ExampleCtx<'_> {
 // }
 
 fn akw22(a: &<ExampleEnv as Env>::Context<'_>) {
-    let r = AsRefMut::<ExampleHandler>::as_ref(a);
+    let r = AsRefMut::<ExampleIntercept>::as_ref(a);
+}
+
+struct ExampleInterceptResolve;
+
+impl<E> InterceptStateResolve<ExampleIntercept,E> for ExampleInterceptResolve where for<'a> E: Env<Context<'a>=ExampleCtx<'a>>, ExampleIntercept: InterceptBuilder<E> {
+    #[inline]
+    fn resolve_intercept_state<'a>(ctx_root: &'a mut E::Context<'_>) -> &'a mut ExampleIntercept {
+        &mut ctx_root.handler
+    }
 }
