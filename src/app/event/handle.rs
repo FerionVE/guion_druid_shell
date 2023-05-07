@@ -10,6 +10,7 @@ use guion::intercept::WidgetIntercept;
 use guion::invalidation::Invalidation;
 use guion::layout::Gonstraints;
 use guion::newpath::{FixedIdx, PathFragment};
+use guion::pathslice::{NewPathStack, PathStackBase};
 use guion::render::WithTestStyle;
 use guion::util::AsRefMut;
 use guion::event::Event as GEvent;
@@ -225,12 +226,15 @@ impl<E> App<E> where
 
         let ghandler = self.ctx.build_intercept();
 
+        let mut path = PathStackBase::new_desktop();
+        let mut path = path.path_stack();
+
         ghandler._event_root(
             &mut self.windows,
-            &(),
+            &mut path,
             &props,
             &event,
-            Some(&window_path),
+            Some(window_path.as_slice()),
             &self.models,
             &mut self.ctx,
         )
@@ -252,18 +256,19 @@ impl<E> App<E> where
 
         let window_path = self.windows.path_of_window(window_id,&mut self.ctx);
 
+        let mut path = PathStackBase::new_desktop();
+        let mut path = path.path_stack();
+
         self.windows.with_window_by_path_mut(
-            &window_path,
+            window_path.as_slice(),
             #[inline] |widget, idx, ctx| {
                 assert_eq!(window_id, idx);
                 
                 let widget = widget.expect("Lost Widget in render");
 
                 //self.caches.cache[idx].reset_current();
-
-                let path = FixedIdx(idx as isize).push_on_stack(());
                 
-                widget.size(&path, &props, &self.models, ctx)
+                widget.size(&mut path.with(FixedIdx(idx as isize)), &props, &self.models, ctx)
             },
             &mut self.ctx
         )

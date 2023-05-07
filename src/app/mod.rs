@@ -5,11 +5,13 @@ use druid_shell::piet::CairoTextLayout;
 use druid_shell::{WindowBuilder, kurbo};
 use guion::aliases::*;
 use guion::backend::Backend;
+use guion::ctx::Context;
 use guion::env::Env;
 use guion::error::ResolveResult;
 use guion::event::imp::StdVarSup;
 use guion::invalidation::Invalidation;
 use guion::newpath::{FixedIdx, PathFragment};
+use guion::pathslice::{NewPathStack, PathStackBase};
 use guion::render::widgets::RenderStdWidgets;
 use guion::root::{RootRef, RootMut};
 use guion::util::AsRefMut;
@@ -17,7 +19,7 @@ use guion::util::bounds::Dims;
 use guion::widget::Widget;
 use guion::widget::cache::DynWidgetCache;
 use guion::widget::declared::WidgetDeclarative;
-use guion::widget_decl::WidgetDeclCallback;
+use guion::widget_decl::DeclScope;
 use guion::widget_decl::mut_target::MStatic;
 use guion::widget_decl::mutor_trait::MutorToBuilder;
 use guion::widget_decl::mutor_trait::{MutorToBuilderDyn, MutorForTarget};
@@ -52,7 +54,7 @@ pub struct App<E> where E: Env {
 impl<E> ArcApp<E> where E: Env, for<'a> E::Context<'a>: AsRefMut<DSState> {
     pub fn new(mut ctx: E::Context<'static>) -> Self {
         let ds_app = druid_shell::Application::new().unwrap(); //TODO error handling in all crate
-        let windows = Windows{windows: vec![], vali: Invalidation::new()};
+        let windows = Windows{windows: vec![], vali: Invalidation::new(), id: ctx.retained_id()};
         ctx.as_mut().clipboard = Some(ds_app.clipboard());
         let app = App {
             ds_app,
@@ -88,11 +90,9 @@ impl<E> ArcApp<E> where
         WB: FnOnce(&mut WindowBuilder),
         M: Send + Sync + 'static,
         WF: FnMut(
+            DeclScope<'_,'_,W,E>, // DeclScope<'_,W,E> = ICE
             &M,
             &(dyn MutorToBuilderDyn<(),MStatic<M>,E>+'_),
-            WidgetDeclCallback<'_,W,E>,
-            E::RootRef<'_>,
-            &mut E::Context<'_>,
         ) + 'static,
     {
         let app;
@@ -106,8 +106,11 @@ impl<E> ArcApp<E> where
 
             s.models.models.push(Box::new(model));
 
+            let mut path = PathStackBase::new_desktop();
+            let mut path = path.path_stack();
+
             let widget = WidgetDeclarative::<(),W,_,E>::new(
-                move |root,model_ref,cb,ctx| {
+                move |cx, _| {
                     let mutor = MutorForTarget::<MStatic<M>,(),_,_>::new(move |root: &mut ModelRoot,callback,_,ctx| {
                         let state = root.models[next_id].downcast_mut::<M>().expect("TODO");
         
@@ -117,13 +120,13 @@ impl<E> ArcApp<E> where
                         )
                     });
 
-                    let model = root.models[next_id].downcast_ref::<M>().expect("TODO");
+                    let model = cx.root().models[next_id].downcast_ref::<M>().expect("TODO");
 
-                    decl_fn(model, mutor.erase(), cb, root, ctx)
+                    (decl_fn)(cx, model, mutor.erase())
                 },
                 (),
                 &s.models,
-                &FixedIdx(next_id as isize).push_on_stack(&()),
+                &mut path.with(FixedIdx(next_id as isize)),
                 &mut s.ctx,
             );
 

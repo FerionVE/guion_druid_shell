@@ -2,8 +2,12 @@ use std::marker::PhantomData;
 use std::ops::Range;
 
 use guion::invalidation::Invalidation;
+use guion::pathslice::{NewPathStack, PathSliceRef, PathSliceMatch, PathSliceOwned, PathStackBase};
+use guion::queron::dyn_tunnel::QueronDyn;
+use guion::render::StdRenderProps;
 use guion::traitcast::WQueryResponder;
 use guion::util::tabulate::{TabulateResponse, TabulateOrigin, TabulateDirection};
+use guion::widget_decl::route::UpdateRoute;
 use guion::{EventResp, event_new};
 use guion::aliases::{ESize, EStyle, ERenderer};
 use guion::ctx::Context;
@@ -24,17 +28,17 @@ use super::window::Window;
 pub struct Windows<E> where E: Env {
     pub windows: Vec<Window<E>>,
     pub vali: Invalidation,
+    pub(crate) id: guion::widget::id::WidgetID,
 }
 
 // impl WidgetRoot
 
 impl<E> Windows<E> where for<'a,'b> E: Env<RootRef<'a>=&'a ModelRoot,RootMut<'b>=&'b mut ModelRoot> {
-    pub(crate) fn path_of_window(&self, window: usize, ctx: &mut E::Context<'_>) -> impl PathResolvus<E> {
-        SimplePathResolvus {
-            inner: (),
-            value: FixedIdx(window as isize),
-            _p: PhantomData,
-        }
+    pub(crate) fn path_of_window(&self, window: usize, ctx: &mut E::Context<'_>) -> PathSliceOwned {
+        let mut path = PathStackBase::new(std::mem::size_of::<FixedIdx>(), std::mem::align_of::<FixedIdx>());
+        let mut path = path.path_stack();
+        let mut path = path.with(FixedIdx(window as isize));
+        path.left_slice_ref().to_owned()
     }
 
     pub fn with_window_by_path<'s,'l:'s,F,R>(
@@ -62,7 +66,7 @@ impl<E> Windows<E> where for<'a,'b> E: Env<RootRef<'a>=&'a ModelRoot,RootMut<'b>
 
     pub fn with_window_by_path_mut<'s,'l:'s,F,R>(
         &'s mut self,
-        i: &(dyn PathResolvusDyn<E>+'_),
+        i: PathSliceRef,
         mut callback: F,
         ctx: &mut E::Context<'_>,
     ) -> R
@@ -70,7 +74,7 @@ impl<E> Windows<E> where for<'a,'b> E: Env<RootRef<'a>=&'a ModelRoot,RootMut<'b>
         F: for<'w,'ww,'c,'cc> FnMut(Result<&'w mut (dyn WidgetDyn<E>+'ww),()>,usize,&'c mut E::Context<'cc>) -> R,
         Self: 'l
     {
-        if let Some(idx) = i.try_fragment::<FixedIdx>() {
+        if let PathSliceMatch::Match(idx, _) = i.fetch().slice_forward::<FixedIdx>() {
             if let Some(v) = self.windows.get_mut(idx.0 as usize) {
                 return (callback)(
                     Ok(v.widget.erase_mut()),
@@ -172,39 +176,38 @@ impl<E> Widget<E> for Windows<E> where for<'a,'b> E: Env<RootRef<'a>=&'a ModelRo
 
     #[inline]
     fn id(&self) -> guion::widget::id::WidgetID {
-        todo!()
+        self.id
     }
 
-    fn _render<P,Ph>(
+    fn _render(
         &mut self,
-        path: &Ph,
-        stack: &P,
+        path: &mut NewPathStack,
+        stack: StdRenderProps<'_,dyn QueronDyn<E>+'_,E,()>,
         renderer: &mut ERenderer<'_,E>,
         force_render: bool,
         cache: &mut Self::Cache,
         root: E::RootRef<'_>,
         ctx: &mut E::Context<'_>
-    ) where Ph: PathStack<E> + ?Sized, P: Queron<E> + ?Sized {
+    ) {
         unimplemented!()
     }
 
-    fn _event_direct<P,Ph,Evt>(
+    fn _event_direct(
         &mut self,
-        path: &Ph,
-        stack: &P,
-        event: &Evt, // TODO what if e.g. bounds change, if it's validated by parents then it's not signaled here
-        route_to_widget: Option<&(dyn PathResolvusDyn<E>+'_)>,
+        path: &mut NewPathStack,
+        stack: &(dyn QueronDyn<E>+'_),
+        event: &(dyn event_new::EventDyn<E>+'_), // TODO what if e.g. bounds change, if it's validated by parents then it's not signaled here
+        route_to_widget: Option<PathSliceRef>,
         root: E::RootRef<'_>,
         ctx: &mut E::Context<'_>
-    ) -> Invalidation where Ph: PathStack<E> + ?Sized, P: Queron<E> + ?Sized, Evt: event_new::Event<E> + ?Sized
-    {
+    ) -> Invalidation {
         let mut passed = Invalidation::valid();
 
         let route_to_window = match route_to_widget {
             // Event sent to this widget itself
-            Some(v) if v.inner().is_none() => None,
+            Some(v) if v.fetch().is_empty() => None,
             // Event sent with path to specific child
-            Some(v) => if let Some(v) = v.try_fragment::<FixedIdx>() {
+            Some(v) => if let PathSliceMatch::Match(v,_) = v.fetch().slice_forward::<FixedIdx>() {
                 if v.0 < self.windows.len() as isize {
                     Some(v.0)
                 } else {
@@ -233,11 +236,15 @@ impl<E> Widget<E> for Windows<E> where for<'a,'b> E: Env<RootRef<'a>=&'a ModelRo
             //cache.cache[i].reset_current();
 
             let vali = self.windows[i as usize].widget.event_direct(
-                &FixedIdx(i).push_on_stack(path),
+                &mut path.with(FixedIdx(i)),
                 &stack,
                 event,
-                route_to_widget.and_then(PathResolvus::inner),
-                root,ctx
+                    route_to_widget.and_then(|rtw| match rtw.fetch().slice_forward::<FixedIdx>() {
+                        PathSliceMatch::Match(_, inner) => Some(inner),
+                        PathSliceMatch::Mismatch => None,
+                        PathSliceMatch::End => None,
+                    }),
+                    root,ctx
             );
 
             self.windows[i as usize].vali |= vali;
@@ -248,13 +255,13 @@ impl<E> Widget<E> for Windows<E> where for<'a,'b> E: Env<RootRef<'a>=&'a ModelRo
         passed
     }
 
-    fn _size<P,Ph>(
+    fn _size(
         &mut self,
-        path: &Ph,
-        stack: &P,
+        path: &mut NewPathStack,
+        stack: &(dyn QueronDyn<E>+'_),
         root: E::RootRef<'_>,
         ctx: &mut E::Context<'_>
-    ) -> ESize<E> where Ph: PathStack<E> + ?Sized, P: Queron<E> + ?Sized {
+    ) -> ESize<E> {
         unimplemented!()
     }
 
@@ -307,17 +314,17 @@ impl<E> Widget<E> for Windows<E> where for<'a,'b> E: Env<RootRef<'a>=&'a ModelRo
     //     (callback)(Err(todo!()),ctx)
     // }
 
-    fn update<Ph>(
+    fn update(
         &mut self,
-        path: &Ph,
-        route: guion::widget_decl::route::UpdateRoute<'_,E>,
+        path: &mut NewPathStack,
+        route: UpdateRoute<'_,E>,
         root: E::RootRef<'_>,
         ctx: &mut E::Context<'_>
-    ) -> Invalidation where Ph: PathStack<E> + ?Sized {
+    ) -> Invalidation {
         if let Some(resolve) = route.resolving() {
-            if let Some(r2) = resolve.try_fragment::<FixedIdx>() {
+            if let PathSliceMatch::Match(r2, _) = resolve.fetch().slice_forward::<FixedIdx>() {
                 if let Some(akw) = self.windows.get_mut(r2.0 as usize) {
-                    let vali = akw.widget.update(&r2.push_on_stack(path), route.for_child_1(), root, ctx);
+                    let vali = akw.widget.update(&mut path.with(*r2), route.for_child_1::<FixedIdx>(), root, ctx);
                     akw.vali |= vali;
                     self.vali |= vali;
                     return vali;
@@ -329,7 +336,7 @@ impl<E> Widget<E> for Windows<E> where for<'a,'b> E: Env<RootRef<'a>=&'a ModelRo
         let mut vali = Invalidation::valid();
 
         for (idx,w) in self.windows.iter_mut().enumerate() {
-            let v = w.widget.update(&FixedIdx(idx as isize).push_on_stack(path), route.for_child_1(), root, ctx);
+            let v = w.widget.update(&mut path.with(FixedIdx(idx as isize)), route.for_child_1::<FixedIdx>(), root, ctx);
             w.vali |= v;
             vali |= v;
         }
@@ -365,12 +372,12 @@ impl<E> Widget<E> for Windows<E> where for<'a,'b> E: Env<RootRef<'a>=&'a ModelRo
         todo!()
     }
 
-    fn resolve_child_dyn<'a,'b>(&'a self, path: &'b (dyn PathResolvusDyn<E>+'b)) -> Option<WidgetChildResolveDynResult<'a,'b,E>> {
-        if let Some(akw) = path.try_fragment::<FixedIdx>() {
+    fn resolve_child_dyn<'a,'b>(&'a self, path: PathSliceRef<'b>) -> Option<WidgetChildResolveDynResult<'a,'b,E>> {
+        if let PathSliceMatch::Match(akw, inner) = path.fetch().slice_forward::<FixedIdx>() {
             if let Some(w) = self.windows.get(akw.0 as usize) {
                 return Some(WidgetChildResolveDynResult {
                     idx: akw.0,
-                    sub_path: path.inner().unwrap(),
+                    sub_path: inner,
                     widget_id: w.widget.id(),
                     widget: &w.widget,
                 });
@@ -379,12 +386,12 @@ impl<E> Widget<E> for Windows<E> where for<'a,'b> E: Env<RootRef<'a>=&'a ModelRo
         None
     }
 
-    fn resolve_child_dyn_mut<'a,'b>(&'a mut self, path: &'b (dyn PathResolvusDyn<E>+'b)) -> Option<WidgetChildResolveDynResultMut<'a,'b,E>> {
-        if let Some(akw) = path.try_fragment::<FixedIdx>() {
+    fn resolve_child_dyn_mut<'a,'b>(&'a mut self, path: PathSliceRef<'b>) -> Option<WidgetChildResolveDynResultMut<'a,'b,E>> {
+        if let PathSliceMatch::Match(akw, inner) = path.fetch().slice_forward::<FixedIdx>() {
             if let Some(w) = self.windows.get_mut(akw.0 as usize) {
                 return Some(WidgetChildResolveDynResultMut {
                     idx: akw.0,
-                    sub_path: path.inner().unwrap(),
+                    sub_path: inner,
                     widget_id: w.widget.id(),
                     widget: &mut w.widget,
                 });
@@ -393,17 +400,17 @@ impl<E> Widget<E> for Windows<E> where for<'a,'b> E: Env<RootRef<'a>=&'a ModelRo
         None
     }
 
-    fn send_mutation<Ph>(
+    fn send_mutation(
         &mut self,
-        path: &Ph,
-        resolve: &(dyn PathResolvusDyn<E>+'_),
+        path: &mut NewPathStack,
+        resolve: PathSliceRef,
         args: &dyn std::any::Any,
         root: E::RootRef<'_>,
         ctx: &mut E::Context<'_>,
-    ) where Ph: PathStack<E> + ?Sized {
-        if let Some(akw) = resolve.try_fragment::<FixedIdx>() {
+    ) where {
+        if let PathSliceMatch::Match(akw, inner) = resolve.fetch().slice_forward::<FixedIdx>() {
             if let Some(w) = self.windows.get_mut(akw.0 as usize) {
-                w.widget.send_mutation(&akw.push_on_stack(path), resolve.inner().unwrap(), args, root, ctx);
+                w.widget.send_mutation(&mut path.with(*akw), inner, args, root, ctx);
             }
         }
     }
@@ -412,21 +419,18 @@ impl<E> Widget<E> for Windows<E> where for<'a,'b> E: Env<RootRef<'a>=&'a ModelRo
         false
     }
 
-    fn _call_tabulate_on_child_idx<P,Ph>(
+    fn _call_tabulate_on_child_idx(
         &self,
         idx: isize,
-        path: &Ph,
-        stack: &P,
-        op: TabulateOrigin<E>,
+        path: &mut NewPathStack,
+        stack: &(dyn QueronDyn<E>+'_),
+        op: TabulateOrigin,
         dir: TabulateDirection,
         root: E::RootRef<'_>,
         ctx: &mut E::Context<'_>
-    ) -> Result<TabulateResponse<E>,E::Error>
-    where 
-        Ph: PathStack<E> + ?Sized, P: Queron<E> + ?Sized
-    {
+    ) -> Result<TabulateResponse,E::Error> {
         if let Some(v) = self.windows.get(idx as usize) {
-            return v.widget._tabulate(&FixedIdx(idx).push_on_stack(path),stack,op.clone(),dir,root,ctx);
+            return v.widget._tabulate(&mut path.with(FixedIdx(idx)),stack,op.clone(),dir,root,ctx);
         }
         Err(todo!())
     }

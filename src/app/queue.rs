@@ -1,6 +1,7 @@
 use guion::aliases::ECQueue;
 use guion::ctx::{Context, queue::*};
 use guion::env::Env;
+use guion::pathslice::{NewPathStack, PathSliceOwned, PathStackBase};
 use guion::util::AsRefMut;
 use guion::widget::Widget;
 use guion::widget_decl::route::UpdateRoute;
@@ -19,17 +20,12 @@ impl<E> App<E> where
 
         if let Some(mut queue) = c.queue_mut().as_mut().queues.remove(&pass) { //c.queue_mut().as_mut().queues.remove(&pass)
             queue.sort_by_key(|(_,p)| *p );
+
+            let mut pathstack = PathStackBase::new_desktop();
+            let mut pathstack = pathstack.path_stack();
     
             for (e,_) in queue {
                 match e {
-                    StdEnqueueable::InvalidateWidget { path } => {
-                        //TODO fix validationions
-                        //invalidate::<E>(stor, path.clone()).expect("Lost Widget in invalidate");
-                    },
-                    StdEnqueueable::ValidateWidgetRender { path } => {
-                        //validate::<E>(stor, path.clone()).expect("Lost Widget in invalidate");
-                    },
-                    StdEnqueueable::ValidateWidgetSize { path, size } => todo!(),
                     StdEnqueueable::Render { force } => {
                         //todo!().force_render |= force;
                         //TODO Path and invalidate Window (here and not through force_render)
@@ -45,12 +41,12 @@ impl<E> App<E> where
                     // },
                     StdEnqueueable::MutateRoot { f } => {
                         f(stor,&(),c);
-                        let vali = self.windows.update(&(), UpdateRoute::new_root(None, None), stor, c);
+                        let vali = self.windows.update(&mut pathstack, UpdateRoute::new_root(None, None), stor, c);
                         self.windows.vali |= vali;
                     },
                     StdEnqueueable::MutateRootClosure { f } => {
                         f(stor,&(),c);
-                        let vali = self.windows.update(&(), UpdateRoute::new_root(None, None), stor, c);
+                        let vali = self.windows.update(&mut pathstack, UpdateRoute::new_root(None, None), stor, c);
                         self.windows.vali |= vali;
                         eprintln!("Updated");
                     },
@@ -64,12 +60,13 @@ impl<E> App<E> where
                         // w.message(msg)
                     },
                     StdEnqueueable::SendMutation { path, payload } => {
-                        self.windows.send_mutation(&(), &*path, &*payload, stor, c)
+                        self.windows.send_mutation(&mut pathstack, path.as_slice(), &*payload, stor, c)
                     },
                     StdEnqueueable::DeclUpdate { scope, zone } => {
-                        let vali = self.windows.update(&(), UpdateRoute::new_root(scope.as_deref(), zone), stor, c);
+                        let vali = self.windows.update(&mut pathstack, UpdateRoute::new_root(scope.as_ref().map(PathSliceOwned::as_slice), zone), stor, c);
                         self.windows.vali |= vali;
                     },
+                    StdEnqueueable::InvalidateWidget { path, vali } => todo!(),
                 }
             }
         }

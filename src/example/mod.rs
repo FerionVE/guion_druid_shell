@@ -1,7 +1,7 @@
 use std::any::Any;
 
 use guion::env::Env;
-use guion::event_new::downcast_map::EventDowncastMap;
+//use guion::event_new::downcast_map::EventDowncastMap;
 use guion::invalidation::Invalidation;
 use guion::newpath::{PathResolvusDyn, PathStack};
 use guion::queron::Queron;
@@ -29,33 +29,33 @@ unsafe impl TraitcastImpl<'static,dyn Any> for dyn Widget<ExampleEnv> {
     type DestTypeID = dyn Nucular<E>;
 }*/
 
-pub struct StupidEventDowncastMap;
+// pub struct StupidEventDowncastMap;
 
-impl<E> EventDowncastMap<E> for StupidEventDowncastMap where E: Env {
-    fn event_downcast_map<W,Ph,S,Evt>(
-        widget: &mut W,
-        path: &Ph,
-        stack: &S,
-        event: &Evt,
-        route_to_widget: Option<&(dyn PathResolvusDyn<E>+'_)>,
-        root: E::RootRef<'_>,
-        ctx: &mut E::Context<'_>,
-    ) -> Invalidation
-    where
-        W: Widget<E> + ?Sized, Ph: PathStack<E> + ?Sized, S: Queron<E> + ?Sized, Evt: guion::event_new::Event<E> + ?Sized
-    {
-        use guion::event_new::variants::StdVariant;
-        use guion::event::standard::variants::*;
+// impl<E> EventDowncastMap<E> for StupidEventDowncastMap where E: Env {
+//     fn event_downcast_map<W,Ph,S,Evt>(
+//         widget: &mut W,
+//         path: &Ph,
+//         stack: &S,
+//         event: &Evt,
+//         route_to_widget: Option<&(dyn PathResolvusDyn<E>+'_)>,
+//         root: E::RootRef<'_>,
+//         ctx: &mut E::Context<'_>,
+//     ) -> Invalidation
+//     where
+//         W: Widget<E> + ?Sized, Ph: PathStack<E> + ?Sized, S: Queron<E> + ?Sized, Evt: guion::event_new::Event<E> + ?Sized
+//     {
+//         use guion::event_new::variants::StdVariant;
+//         use guion::event::standard::variants::*;
 
-        guion::event_downcast_map_tryion!(
-            widget, path, stack, event, route_to_widget, root, ctx;
-            StdVariant<RootEvent<E>,E>;
-            StdVariant<MouseMove,E>;
-            StdVariant<MouseEnter,E>;
-            StdVariant<MouseLeave,E>;
-            StdVariant<Focus,E>;
-            StdVariant<Unfocus,E>
-        );
-        widget.event_direct(path, stack, event, route_to_widget, root, ctx)
-    }
-}
+//         guion::event_downcast_map_tryion!(
+//             widget, path, stack, event, route_to_widget, root, ctx;
+//             StdVariant<RootEvent<E>,E>;
+//             StdVariant<MouseMove,E>;
+//             StdVariant<MouseEnter,E>;
+//             StdVariant<MouseLeave,E>;
+//             StdVariant<Focus,E>;
+//             StdVariant<Unfocus,E>
+//         );
+//         widget.event_direct(path, stack, event, route_to_widget, root, ctx)
+//     }
+// }

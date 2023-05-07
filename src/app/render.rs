@@ -3,7 +3,8 @@ use guion::aliases::{ECQueue, ERenderer, ESCursor, ETextLayout};
 use guion::backend::Backend;
 use guion::env::Env;
 use guion::newpath::{FixedIdx, PathFragment};
-use guion::render::{Render as _, WithTestStyle, TestStyleColorType};
+use guion::pathslice::{NewPathStack, PathStackBase};
+use guion::render::{Render as _, WithTestStyle, TestStyleColorType, StdRenderProps};
 use guion::render::widgets::RenderStdWidgets;
 use guion::style::selectag::standard::StdSelectag;
 use guion::style::standard::cursor::StdCursor;
@@ -71,24 +72,32 @@ for<'a,'b> E: Env<RootRef<'a>=&'a ModelRoot,RootMut<'b>=&'b mut ModelRoot>,
         render.pre();
 
         // visual caching debug
-        //render.fill_rect(&(TestStyleColorType::Custom(guion::style::color::Color::from_rgba8([0,0,0,10])) + &props), &mut s.ctx);
+        render.fill_rect(&(TestStyleColorType::Custom(guion::style::color::Color::from_rgba8([0,0,0,10])) + &props), &mut s.ctx);
 
         //process queued and render
         render.force = false; //TODO force from piet backend
 
         let force = render.force;
 
+        let mut pathstack = PathStackBase::new_desktop();
+        let mut pathstack = pathstack.path_stack();
+
         let root: E::RootRef<'_> = &s.models;
         s.windows.with_window_by_path_mut(
-            &path,
+            path.as_slice(),
             #[inline] |widget, idx, ctx| {
                 let widget = widget.expect("Lost Widget in render");
 
                 //s.caches.cache[idx].reset_current();
 
-                let path = FixedIdx(idx as isize).push_on_stack(());
-                
-                widget.render(&path, &props, &mut render, force, &mut s.caches.cache[idx], root, ctx);
+                widget.render(
+                    &mut pathstack.with(FixedIdx(idx as isize)),
+                    StdRenderProps::new(&props),
+                    &mut render,
+                    force,
+                    &mut s.caches.cache[idx],
+                    root, ctx
+                );
             },
             &mut s.ctx
         );
